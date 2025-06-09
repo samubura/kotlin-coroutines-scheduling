@@ -1,10 +1,10 @@
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -17,14 +17,15 @@ import kotlin.uuid.Uuid
 object PlanContextKey : CoroutineContext.Key<PlanContext>
 @OptIn(ExperimentalUuidApi::class)
 data class PlanContext(val planID: String,
-                       val intentionId : String = Uuid.random().toString()) : CoroutineContext.Element {
+                       private val intention : String?) : CoroutineContext.Element {
+    val intentionId : String = intention ?: Uuid.random().toString()
     override val key: CoroutineContext.Key<*> get() = PlanContextKey
 }
 
-abstract class IntentionDispatcher(val plans : Sequence<Plan>) : CoroutineDispatcher() {
+abstract class IntentionDispatcher(val plans : Sequence<Plan<Any?>>) : CoroutineDispatcher() {
     val intentions = mutableMapOf<String, ArrayDeque<Runnable>>()
     val suspendedIntentions = mutableSetOf<String>()
-    val events = MutableSharedFlow<InternalEvent>()
+    val events = Channel<InternalEvent<Any?>>(Channel.UNLIMITED)
 
     private val lock = Mutex()
     private val intentionAvailable = Channel<Unit>(Channel.CONFLATED)
@@ -66,8 +67,8 @@ abstract class IntentionDispatcher(val plans : Sequence<Plan>) : CoroutineDispat
         }
     }
 
-    suspend fun achieve(planID: String, completion: Deferred<Unit>){
-        events.emit(InternalEvent(planID, completion))
+    suspend fun achieve(planID: String, completion: CompletableDeferred<*>, intentionId: String?){
+        events.send(InternalEvent(planID, completion, intentionId) as InternalEvent<Any?>)
     }
 
     //TODO questa non mi piace, non credo dovrebbe esserci
@@ -87,7 +88,7 @@ abstract class IntentionDispatcher(val plans : Sequence<Plan>) : CoroutineDispat
 
 
 class TrackingContinuationInterceptor(
-    private val dispatcher: IntentionDispatcher
+    val dispatcher: IntentionDispatcher
 ) : ContinuationInterceptor {
 
     override val key: CoroutineContext.Key<*> = ContinuationInterceptor

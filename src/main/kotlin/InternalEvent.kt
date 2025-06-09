@@ -1,5 +1,14 @@
-import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.CompletableDeferred
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-data class InternalEvent(val planTrigger: String,
-                          val completion: Deferred<Unit>)
+
+@OptIn(ExperimentalUuidApi::class)
+data class InternalEvent<T>(
+    val planTrigger: String,
+    val completion: CompletableDeferred<T> = CompletableDeferred<T>(),
+    private val intention : String?
+) {
+    val intentionId : String = intention ?: Uuid.random().toString()
+}
 

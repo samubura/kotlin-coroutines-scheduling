@@ -1,7 +1,7 @@
 import kotlinx.coroutines.Runnable
 import kotlin.coroutines.CoroutineContext
 
-class RoundRobinDispatcher(plans : Sequence<Plan>) : IntentionDispatcher(plans) {
+class RoundRobinDispatcher(plans : Sequence<Plan<Any?>>) : IntentionDispatcher(plans) {
     private val intentionOrder = ArrayDeque<String>()
 
     override fun dispatch(context: CoroutineContext, block: Runnable) {

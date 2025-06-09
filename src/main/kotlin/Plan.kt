@@ -1,4 +1,4 @@
 import kotlinx.coroutines.CoroutineScope
 
-data class Plan(val id: String,
-                val runnable: suspend CoroutineScope.() -> Unit)
+data class Plan<T>(val id: String,
+                   val body: suspend () -> T)

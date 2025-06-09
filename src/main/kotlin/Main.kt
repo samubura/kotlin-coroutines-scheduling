@@ -3,21 +3,28 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.*
 
-val plans = sequenceOf(
+val plans : Sequence<Plan<Any?>> = sequenceOf(
     Plan("A") {
         repeat(3) {
             log("Plan A - step $it")
             delay(500)
+            achieve("B")
         }
+
+        log("Plan A DONE")
     },
-    Plan("B") { repeat(3) {
-        log("Plan B - step $it")
-        delay(500)
-    } },
-    Plan("C") { repeat(3) {
-        log("Plan C - step $it")
-        delay(500)
-    } }
+
+    Plan("B") {
+        log("Plan B - executed")
+        42
+     },
+
+    Plan("C") {
+        repeat(3) {
+            log("Plan C - step $it")
+            delay(500)
+        }
+    }
 )
 
 // --- Usage example ---
@@ -26,19 +33,24 @@ fun main() = runBlocking {
     val interceptor = TrackingContinuationInterceptor(dispatcher)
     val scope = CoroutineScope(dispatcher + interceptor)
 
-    scope.launch(PlanContext("0", "test")) {
-        repeat(3) {
-            log("Plan 0 - step $it")
-            delay(500)
-        }
-    }
-
     launch(Dispatchers.Default) {
         while (true) {
+            val event = withTimeoutOrNull(100) {
+                dispatcher.events.receive()
+            }
+            if(event != null) {
+                val plan = matchPlan(event, dispatcher.plans)
+                if (plan != null) {
+                    launchPlan(plan, event, scope)
+                }
+            }
             dispatcher.isIntentionAvailable()
             dispatcher.step()
         }
     }
+
+    dispatcher.events.trySend(InternalEvent("A", intention = "Intention1"))
+    dispatcher.events.trySend(InternalEvent("C", intention = "Intention2"))
 
     println("Main done!");
 }
