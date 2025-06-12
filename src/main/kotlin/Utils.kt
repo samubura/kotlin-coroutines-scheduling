@@ -16,7 +16,7 @@ suspend fun achieve(planID: String, completion: CompletableDeferred<Unit> = Comp
     val interceptor = coroutineContext[ContinuationInterceptor] as TrackingContinuationInterceptor
     interceptor.dispatcher.achieve(planID, completion, intentionId)
     completion.await()
-    log("Plan $planID achieved")
+    log("Plan $planID achieved, continuing...")
 }
 
 fun <T> matchPlan(event : InternalEvent<T>, plans: Sequence<Plan<T>>): Plan<T>? {
@@ -27,7 +27,7 @@ fun <T> launchPlan(plan: Plan<T>, event: InternalEvent<T>, scope: CoroutineScope
     scope.launch(PlanContext(plan.id, event.intentionId)) {
         log("Launching plan ${plan.id}")
         val result = plan.body()
-        event.completion.complete(result) //TODO this is not always releasing the intention, why?
+        event.completion.complete(result) //TODO this is not releasing the intention, why?
         //TODO i suspect this has something to do with cleaning up the intention
         log("Plan ${plan.id} completed")
     }

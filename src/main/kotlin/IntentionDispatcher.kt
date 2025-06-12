@@ -54,7 +54,7 @@ abstract class IntentionDispatcher(val plans : Sequence<Plan<Any?>>) : Coroutine
     fun step() {
         val intentionID = selectNextIntention() ?: return
         log("one step of intention: $intentionID")
-        val runnable = intentions[intentionID]?.lastOrNull()
+        val runnable = intentions[intentionID]?.removeLastOrNull()
         runnable?.run()
     }
 
@@ -96,16 +96,18 @@ class TrackingContinuationInterceptor(
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
         val planContext = continuation.context[PlanContextKey] ?: return continuation
         val intentionId = planContext.intentionId
-        log("started $intentionId")
+        log("intercepted $intentionId")
         return object: Continuation<T> {
             override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
-                //log("resume $taskId")
+                log("resume $intentionId")
                 dispatcher.dispatch(context, Runnable {
-                    //log("executing $taskId")
+                    //log("executing $intentionId")
                     continuation.resumeWith(result)
-                    //log("suspended $taskId")
+                    //TODO when sub-intention is completed for some reason
+                    // maybe I don't need to mark it suspended?
+                    log("suspended $intentionId")
                     dispatcher.markSuspended(intentionId)
                 })
             }
