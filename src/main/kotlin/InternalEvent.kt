@@ -11,4 +11,3 @@ data class InternalEvent<T>(
 ) {
     val intentionId : String = intention ?: Uuid.random().toString()
 }
-
