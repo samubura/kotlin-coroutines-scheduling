@@ -8,7 +8,7 @@ val plans : Sequence<Plan<Any?>> = sequenceOf(
         repeat(3) {
             log("Plan A - step $it")
             delay(50)
-            //achieve("B")
+            achieve("B")
         }
         delay(50)
 
