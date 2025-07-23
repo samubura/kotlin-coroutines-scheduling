@@ -37,6 +37,7 @@ suspend fun a2() = coroutineScope {
 suspend fun achieve() {
     val deferred : CompletableDeferred<Unit> = CompletableDeferred()
     deferredList.add(deferred)
+    log("Waiting subgoal to complete...")
     deferred.await()
 }
 
@@ -44,7 +45,7 @@ suspend fun subplan(completion: CompletableDeferred<Unit>){
     log("subgoal is working")
     delay(1000);
     completion.complete(Unit)
-    log("subgoal completed!")
+    log("subgoal achieved!")
 }
 
 suspend fun plan(name: String) {
@@ -54,7 +55,7 @@ suspend fun plan(name: String) {
             //delay(100)
             log("$name achieving...")
             achieve()
-            log("$name achieved!")
+            log("$name completed!")
         }
     }
 }
@@ -74,6 +75,7 @@ fun main() {
         //Main execution loop
         launch(Dispatchers.Default){
             while(true){
+                log("Step ${step++}");
                 //if there is a subgoal to achieve, launch the corresponding subplan
                 if(deferredList.isNotEmpty()){
                     launch(interceptor){
@@ -81,13 +83,19 @@ fun main() {
                     }
                 }
                 //if there is an intention available to continue, run it
-                val continuation = channel.receive()
-                log("Step ${step++}");
-                //TODO THIS IS WRONG continuations are always running on the same main thread and end up starvating it
+                val continuation = channel.tryReceive()
+                if(continuation.isSuccess){
+                    log("Continuation available, running...")
+                    continuation.getOrNull()?.invoke() //run the continuation
+                } else {
+                    log("No continuation available...")
+                    delay(200)
+                }
+                //TODO THIS IS WRONG continuations are always running on the same main thread and end up in a deadlock
                 // the interceptor overrides the dispatcher, meaning that we need both??
                 // but how to run the continuation not in the same thread that is managing the agent lifecycle?
                 // without losing the interception??
-                continuation()
+
                 //fake delay for easy read
                 //delay(1000)
             }
@@ -105,6 +113,7 @@ object TestInterceptor : ContinuationInterceptor {
 
             override fun resumeWith(result: Result<T>) {
                 channel.trySend {
+                    log("resuming")
                     continuation.resumeWith(result)
                     val job = continuation.context.job;
                     //log("Active: ${job.isActive}, Completed:${job.isCompleted}")
