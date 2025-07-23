@@ -78,24 +78,23 @@ fun main() {
                 log("Step ${step++}");
                 //if there is a subgoal to achieve, launch the corresponding subplan
                 if(deferredList.isNotEmpty()){
+                    val deferred = deferredList.removeFirst()
                     launch(interceptor){
-                        subplan(deferredList.removeFirst())
+                        subplan(deferred)
                     }
                 }
-                //if there is an intention available to continue, run it
-                val continuation = channel.tryReceive()
-                if(continuation.isSuccess){
-                    log("Continuation available, running...")
-                    continuation.getOrNull()?.invoke() //run the continuation
-                } else {
-                    log("No continuation available...")
-                    delay(200)
-                }
-                //TODO THIS IS WRONG continuations are always running on the same main thread and end up in a deadlock
-                // the interceptor overrides the dispatcher, meaning that we need both??
-                // but how to run the continuation not in the same thread that is managing the agent lifecycle?
-                // without losing the interception??
+                val continuation = channel.receive()
+                continuation()
 
+                //if there is an intention available to continue, run it
+//                val continuation = channel.tryReceive()
+//                if(continuation.isSuccess){
+//                    log("Continuation available, running...")
+//                    continuation.getOrNull()?.invoke() //run the continuation
+//                } else {
+//                    log("No continuation available...")
+//                    delay(200)
+//                }
                 //fake delay for easy read
                 //delay(1000)
             }
@@ -108,8 +107,8 @@ object TestInterceptor : ContinuationInterceptor {
 
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
         //log("coroutine started")
-        return object : Continuation<T> {;
-            override val context: CoroutineContext = CoroutineName("Intercepted")
+        return object : Continuation<T> {
+            override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
                 channel.trySend {
