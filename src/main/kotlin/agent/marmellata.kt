@@ -49,15 +49,21 @@ suspend fun subplan(completion: CompletableDeferred<Unit>){
 }
 
 suspend fun plan(name: String) {
-    coroutineScope {
-        repeat(3) {
-            log("$name $it")
-            //delay(100)
-            log("$name achieving...")
-            achieve()
-            log("$name completed!")
-        }
+    repeat(3) {
+        log("$name $it")
+        //delay(100)
+        log("$name achieving...")
+        achieve()
+        log("$name completed!")
     }
+}
+
+suspend fun noSubGoalPlan(name: String) {
+    repeat(20) {
+        log("$name $it")
+        delay(50)
+    }
+    log("$name completed!")
 }
 
 
@@ -70,6 +76,7 @@ fun main() {
         launch( interceptor) {
             launch {plan("A")}
             launch {plan("B")}
+            launch {noSubGoalPlan("C")}
         }
 
         //Main execution loop
