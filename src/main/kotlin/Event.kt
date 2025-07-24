@@ -1,7 +1,5 @@
 @file:OptIn(ExperimentalUuidApi::class)
 
-package agent
-
 import kotlinx.coroutines.CompletableDeferred
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

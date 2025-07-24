@@ -1,25 +1,15 @@
-package agent
-
+import agent.IntentionInterceptor
+import agent.log
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.yield
-import log
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 
 val channel : Channel<() -> Unit> = Channel(Channel.Factory.UNLIMITED)
@@ -69,7 +59,7 @@ suspend fun noSubGoalPlan(name: String) {
 
 fun main() {
     var step = 0;
-    val interceptor = TestInterceptor
+    val interceptor = MarmellataInterceptor
     runBlocking {
 
         //basically this would be the agent body, launching initial plans on the interceptor
@@ -83,7 +73,7 @@ fun main() {
         launch(Dispatchers.Default){
             while(true){
                 log("Step ${step++}");
-                //if there is a subgoal to achieve, launch the corresponding subplan
+                //if there is a subgoal to agent.achieve, launch the corresponding subplan
                 if(deferredList.isNotEmpty()){
                     val deferred = deferredList.removeFirst()
                     launch(interceptor){
@@ -96,10 +86,10 @@ fun main() {
                 //if there is an intention available to continue, run it
 //                val continuation = channel.tryReceive()
 //                if(continuation.isSuccess){
-//                    log("Continuation available, running...")
+//                    agent.log("Continuation available, running...")
 //                    continuation.getOrNull()?.invoke() //run the continuation
 //                } else {
-//                    log("No continuation available...")
+//                    agent.log("No continuation available...")
 //                    delay(200)
 //                }
                 //fake delay for easy read
@@ -110,10 +100,10 @@ fun main() {
     }
 }
 
-object TestInterceptor : ContinuationInterceptor {
+object MarmellataInterceptor : ContinuationInterceptor {
 
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
-        //log("coroutine started")
+        log("coroutine started")
         return object : Continuation<T> {
             override val context: CoroutineContext = continuation.context
 
@@ -121,8 +111,6 @@ object TestInterceptor : ContinuationInterceptor {
                 channel.trySend {
                     log("resuming")
                     continuation.resumeWith(result)
-                    val job = continuation.context.job;
-                    //log("Active: ${job.isActive}, Completed:${job.isCompleted}")
                     log("suspending")
                 }
             }
@@ -130,7 +118,7 @@ object TestInterceptor : ContinuationInterceptor {
     }
 
     override fun releaseInterceptedContinuation(continuation: Continuation<*>) {
-        //log("coroutine completed")
+        //agent.log("coroutine completed")
     }
 
     override val key: CoroutineContext.Key<*> = ContinuationInterceptor

@@ -1,56 +1,55 @@
 package agent
 
-import Plan
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
+class Agent (val name : String) {
+    val intentions: Channel<() -> Unit> = Channel(Channel.Factory.UNLIMITED)
 
-class Agent(
-    val plans: Map<String, Plan<*>>,
-    val selectIntention : (List<Intention>) -> Intention
-){
-    //TODO set to a proper AgentScope
-    private val agentScope: CoroutineScope = CoroutineScope(
-        Dispatchers.IO
-    )
+    //TODO change: all agents now start with an initial "goal" to achieve
+    val events: MutableList<CompletableDeferred<Unit>> = mutableListOf(CompletableDeferred())
 
-    val intentions : MutableList<Intention> = mutableListOf()
-    val events = Channel<Event>(Channel.Factory.UNLIMITED)
+    val context = IntentionInterceptor(intentions) + CoroutineName(name)
 
-    suspend fun run() {
-        val event = events.receive()
-        handleEvent(event)
-        step()
-        if(events.tryReceive().isFailure && intentions.isNotEmpty()){ //proactive behaviour
-            events.send(StepEvent())
-        }
+    fun say(message: String){
+        log("$name: $message")
     }
 
-    private fun handleEvent(event : Event) =
-        when(event) {
-            is AchieveEvent<*> -> achieve(event)
-            is StepEvent -> Unit
-        }
+    // This fakes an action that awaits the achievement of a subgoal
+    suspend fun achieve() {
+        val deferred : CompletableDeferred<Unit> = CompletableDeferred()
+        events.add(deferred)
+        say("Waiting subgoal to complete...")
+        deferred.await()
+    }
 
-    private fun achieve(event: AchieveEvent<*>) {
-        plans[event.planTrigger]?.also { plan ->
-            val intention = event.intentionID?.let { id ->
-                intentions.firstOrNull{ it.id == id }
+    //This fakes matching a plan for a goal and pursuing it
+    suspend fun launchPlan(completion: CompletableDeferred<Unit>){
+        say("working towards goal")
+        delay(1000);
+        completion.complete(Unit)
+        say("goal achieved!")
+        achieve()
+    }
+
+    suspend fun run() = coroutineScope {
+        say("Started...")
+        while(true){
+            //If there is a goal to be achieved, launch a plan for it
+            if(events.isNotEmpty()){
+                val deferred = events.removeFirst()
+                launch(context){
+                    launchPlan(deferred)
+                }
             }
-            intention?.stack(plan.body) ?: intentions.add(Intention(listOf(plan.body)))
+            //Execute one step of the next available intention, or wait indefinitely
+            val continuation = intentions.receive()
+            continuation()
         }
     }
-
-
-    private fun step(){
-        val intention = selectIntention(intentions)
-        agentScope.launch {
-            intention.stack.first().invoke()
-        }
-
-    }
-
 }

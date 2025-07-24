@@ -1,3 +1,5 @@
+import PlanContext
+import PlanContextKey
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -8,8 +10,10 @@ fun log(message: String) {
     println("${Thread.currentThread()} - $message")
 }
 
+
+
 suspend fun achieve(planID: String, completion: CompletableDeferred<Unit> = CompletableDeferred<Unit>()) {
-    log("I want to achieve plan $planID")
+    log("I want to agent.achieve plan $planID")
     val intentionId = coroutineContext[PlanContextKey]?.intentionId
     val interceptor = coroutineContext[ContinuationInterceptor] as TrackingContinuationInterceptor
     interceptor.dispatcher.achieve(planID, completion, intentionId)
@@ -30,3 +34,4 @@ fun <T> launchPlan(plan: Plan<T>, event: InternalEvent<T>, scope: CoroutineScope
         log("Plan ${plan.id} completed")
     }
 }
+

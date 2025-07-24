@@ -1,3 +1,4 @@
+import agent.log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -102,7 +103,7 @@ class TrackingContinuationInterceptor(
             override fun resumeWith(result: Result<T>) {
                 log("resume $intentionId")
                 dispatcher.dispatch(context, Runnable {
-                    //log("executing $intentionId")
+                    //agent.log("executing $intentionId")
                     continuation.resumeWith(result)
                     //TODO when sub-intention is completed for some reason
                     // maybe I don't need to mark it suspended?
