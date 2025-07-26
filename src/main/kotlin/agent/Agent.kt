@@ -33,7 +33,7 @@ class Agent (
     suspend fun achieve(planTrigger: String) {
         val event = AchieveEvent(planTrigger)
         events.add(event)
-        say("Waiting subgoal to complete...")
+        //say("Waiting subgoal to complete...")
         event.completion.await()
     }
 
@@ -48,18 +48,19 @@ class Agent (
     }
 
     suspend fun run() = coroutineScope {
-        say("Started...")
+        //say("Started...")
         while(true){
             //If there is a goal to be achieved, launch a plan for it
             if(events.isNotEmpty()){
                 val event = events.removeFirst()
                 when(event) {
                     is AchieveEvent -> {
-                        say("Achieving goal: ${event.planTrigger}")
+                        //say("Achieving goal: ${event.planTrigger}")
                         // Launch a plan for the event
                         val plan = matchPlan(event)
                         launch(context) {
                             plan()
+                            event.completion.complete(Unit) // TODO Important!
                         }
                     }
                 }

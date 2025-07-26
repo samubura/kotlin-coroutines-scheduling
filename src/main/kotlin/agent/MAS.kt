@@ -9,19 +9,24 @@ import kotlin.coroutines.coroutineContext
 
 val plans: Map<String, suspend () -> Unit> = mapOf(
     "hello" to {
-        log("Hello")
+        val agent =  coroutineContext.agent
+        agent.say("Hello")
         // Simulate some work
         delay(1000)
-        log("World!")
-        coroutineContext.agent.achieve("goodbye")
-        delay(1000)
-        log("Hello again!")
+        agent.say("World!")
+        agent.achieve("goodbye")
+        agent.say("DONE")
     },
     "goodbye" to {
-        log("Goodbye")
+        val agent =  coroutineContext.agent
+        agent.say("Goodbye")
         // Simulate some work
         delay(1000)
-        log("See you later!")
+        agent.say("See you later!")
+    },
+    "test" to {
+        val agent =  coroutineContext.agent
+        agent.say("Test")
     }
 )
 
@@ -29,12 +34,10 @@ val plans: Map<String, suspend () -> Unit> = mapOf(
 
 suspend fun main(): kotlin.Unit = coroutineScope{
     val bob = Agent("Bob", plans, listOf(AchieveEvent("hello")))
-    //val alice = Agent("Alice", plans)
+    val alice = Agent("Alice", plans, listOf(AchieveEvent("goodbye")))
 
 
-    launch {
-        bob.run()
-    }
+    launch { bob.run() }
     //launch { alice.run() }
 
 }

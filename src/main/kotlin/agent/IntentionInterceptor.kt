@@ -11,15 +11,15 @@ class IntentionInterceptor(val intentionPool: Channel<() -> Unit>) : Continuatio
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
 
         val name = continuation.context.agent.name
-        log("${name}: coroutine started")
+        //log("${name}: coroutine started")
         return object : Continuation<T> {
             override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
                 intentionPool.trySend {
-                    log("${name}: resuming")
+                    //log("${name}: resuming")
                     continuation.resumeWith(result)
-                    log("${name}: suspending")
+                    //log("${name}: suspending")
                 }
             }
         }
@@ -27,7 +27,7 @@ class IntentionInterceptor(val intentionPool: Channel<() -> Unit>) : Continuatio
 
     override fun releaseInterceptedContinuation(continuation: Continuation<*>) {
         val name = continuation.context.agent.name
-        log("${name}: coroutine completed")
+        //log("${name}: coroutine completed")
     }
 
     override val key: CoroutineContext.Key<*> = ContinuationInterceptor
