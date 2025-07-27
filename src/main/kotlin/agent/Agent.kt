@@ -1,5 +1,6 @@
 package agent
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -7,10 +8,6 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 
-class AgentContext(val agent: Agent) : CoroutineContext.Element {
-    override val key: CoroutineContext.Key<*> = Key
-    companion object Key : CoroutineContext.Key<AgentContext>
-}
 
 class Agent (
     val name: String,
@@ -40,13 +37,21 @@ class Agent (
         event.completion.await()
     }
 
-    private fun matchPlan(event: Event) : suspend () -> Unit {
+fun matchPlan(event: Event) : Pair<suspend () -> Unit, CompletableDeferred<Unit>>? {
         when(event) {
             is AchieveEvent -> {
-                return plans[event.planTrigger] ?: {
-                    //TODO handle this better
-                    throw IllegalStateException("No plan found for trigger: ${event.planTrigger}")
-                }
+                val plan = plans[event.planTrigger]
+                    ?: return null //No plan found for this event
+                return Pair(plan, event.completion)
+            }
+            is PerceptionEvent<*> -> {
+                //TODO handle perception events
+                log("Perception event received: ${event.key} = ${event.value}")
+                return null //No plan for perception events yet
+            }
+            else -> {
+                log("Unknown event type: $event")
+                return null //No plan for unknown events
             }
         }
     }
@@ -57,16 +62,17 @@ class Agent (
             //Handle an incoming event if available
             if(events.isNotEmpty()){
                 val event = events.removeFirst()
-                when(event) {
-                    is AchieveEvent -> {
-                        //say("Achieving goal: ${event.planTrigger}")
-                        val plan = matchPlan(event)
-                        launch(context) {
-                            plan()
-                            event.completion.complete(Unit) //Don't forget to complete the deferred!
-                        }
+
+                matchPlan(event)?.let { (plan, completion) ->
+                    launch(context) {
+                        plan()
+                        completion.complete(Unit) // Don't forget to complete the deferred!
                     }
+                } ?: run {
+                    log("No plan found for event: $event")
                 }
+
+
             }
             //Execute one step of the next available intention, or wait indefinitely
             //TODO an agent that has nothing to do now will block forever
@@ -77,4 +83,9 @@ class Agent (
             continuation()
         }
     }
+}
+
+class AgentContext(val agent: Agent) : CoroutineContext.Element {
+    override val key: CoroutineContext.Key<*> = Key
+    companion object Key : CoroutineContext.Key<AgentContext>
 }

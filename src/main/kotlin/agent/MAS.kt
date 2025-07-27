@@ -15,6 +15,7 @@ val plans: Map<String, suspend () -> Unit> = mapOf(
         delay(1000)
         agent.say("World!")
         agent.achieve("goodbye")
+        agent.achieve("lala")
         agent.say("DONE")
     },
     "goodbye" to {
@@ -42,19 +43,19 @@ suspend fun main(): Unit = coroutineScope{
                 AchieveEvent("hello")
             )
         ),
-        Agent(
-            "Carl", plans,
-            listOf(
-                AchieveEvent("hello")
-            )
-        ),
-        Agent(
-        "Alice", plans,
-        listOf(
-            AchieveEvent("parallel"),
-            AchieveEvent("parallel")
-            )
-        )
+//        Agent(
+//            "Carl", plans,
+//            listOf(
+//                AchieveEvent("hello")
+//            )
+//        ),
+//        Agent(
+//        "Alice", plans,
+//        listOf(
+//            AchieveEvent("parallel"),
+//            AchieveEvent("parallel")
+//            )
+//        )
     ).forEach { agent ->
         launch {
             agent.run()

@@ -19,4 +19,9 @@ data class AchieveEvent(
 ) : Event
 
 
+data class PerceptionEvent<T>(
+    val key: String,
+    val value: T
+) : Event
+
 //TODO other types of events
