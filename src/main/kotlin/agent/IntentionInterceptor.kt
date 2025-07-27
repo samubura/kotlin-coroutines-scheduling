@@ -1,26 +1,25 @@
 package agent
 
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.channels.Channel
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 
-class IntentionInterceptor(val intentionPool: Channel<() -> Unit>) : ContinuationInterceptor {
+object IntentionInterceptor : ContinuationInterceptor {
 
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
 
-        val name = continuation.context.agent.name
-        //log("${name}: coroutine started")
+        val agent = continuation.context.agent;
+        //log("${agent.name}: coroutine started")
         return object : Continuation<T> {
             override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
-                intentionPool.trySend {
+                agent.intentions.trySend {
                     //log("${name}: resuming")
                     continuation.resumeWith(result)
                     //log("${name}: suspending")
                 }
+                agent.events.trySend(StepEvent)
             }
         }
     }

@@ -1,7 +1,6 @@
 package agent
 
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -12,16 +11,18 @@ import kotlin.coroutines.CoroutineContext
 class Agent (
     val name: String,
     val plans: Map<String, suspend () -> Unit>,
-    goals: List<AchieveEvent>
+    val initialGoals: List<AchieveEvent>,
+    val beliefs: MutableMap<String, Any> = mutableMapOf()
 ) {
     //TODO the channel is effective, but it does not allow for
     // setting priorities, or inspecting/canceling ongoing intentions
     // now intentions are executed on a first-come-first-served basis
     val intentions: Channel<() -> Unit> = Channel(Channel.Factory.UNLIMITED)
 
-    val events: MutableList<Event> = goals.toMutableList()
+    //val events: MutableList<Event> = goals.toMutableList()
+    val events: Channel<Event> = Channel(Channel.Factory.UNLIMITED)
 
-    val context = IntentionInterceptor(intentions) +
+    val context = IntentionInterceptor +
             AgentContext(this)
 
     fun say(message: String){
@@ -32,22 +33,46 @@ class Agent (
     // and wait for the corresponding goal to be achieved.
     suspend fun achieve(planTrigger: String) {
         val event = AchieveEvent(planTrigger)
-        events.add(event)
+        events.send(event)
         //say("Waiting subgoal to complete...")
         event.completion.await()
     }
 
-fun matchPlan(event: Event) : Pair<suspend () -> Unit, CompletableDeferred<Unit>>? {
+    suspend fun believe(beliefName: String, value: Any) {
+        val event = BeliefAddEvent(beliefName, value)
+        events.send(event)
+    }
+
+    fun matchPlan(event: Event) : Pair<suspend () -> Unit, CompletableDeferred<Unit>>? {
         when(event) {
             is AchieveEvent -> {
                 val plan = plans[event.planTrigger]
-                    ?: return null //No plan found for this event
+                    ?: run {
+                        say("No plan found for event: ${event.planTrigger}")
+                        event.completion.completeExceptionally(
+                            IllegalStateException("No plan found for event: ${event.planTrigger}")
+                        )
+                        return null
+                    } //No plan found for this event
                 return Pair(plan, event.completion)
             }
-            is PerceptionEvent<*> -> {
-                //TODO handle perception events
-                log("Perception event received: ${event.key} = ${event.value}")
-                return null //No plan for perception events yet
+            is BeliefAddEvent<*> -> {
+                if(beliefs.contains(event.beliefName)){
+                    if(beliefs[event.beliefName] == event.value){
+                        say("Belief ${event.beliefName} already exists with value ${event.value}, ignoring.")
+                        return null // No need to add the belief, it already exists
+                    }
+                }
+                beliefs[event.beliefName] = event.value
+                plans["+${event.beliefName}"]?.let{
+                    return Pair(it, CompletableDeferred()) // TODO this is a fake deferred, this won't be awaited
+                }
+                return null
+            }
+            is StepEvent -> {
+                //say("I have a continuation to run...")
+                intentions.tryReceive().getOrNull()?.let{ it()}
+                return null
             }
             else -> {
                 log("Unknown event type: $event")
@@ -57,30 +82,21 @@ fun matchPlan(event: Event) : Pair<suspend () -> Unit, CompletableDeferred<Unit>
     }
 
     suspend fun run() = coroutineScope {
-        //say("Started...")
+
+        // Init the agent
+        initialGoals.forEach{events.send(it)}
+
+        //Run the loop
         while(true){
             //Handle an incoming event if available
-            if(events.isNotEmpty()){
-                val event = events.removeFirst()
-
-                matchPlan(event)?.let { (plan, completion) ->
-                    launch(context) {
-                        plan()
-                        completion.complete(Unit) // Don't forget to complete the deferred!
-                    }
-                } ?: run {
-                    log("No plan found for event: $event")
+            val event = events.receive()
+            //TODO I tried to move this to a suspend function but it did not work, why?
+            matchPlan(event)?.let { (plan, completion) ->
+                launch(context) {
+                    plan()
+                    completion.complete(Unit) // Don't forget to complete the deferred!
                 }
-
-
             }
-            //Execute one step of the next available intention, or wait indefinitely
-            //TODO an agent that has nothing to do now will block forever
-            // the agent should be allowed to perceive new events while waiting
-            // for the next intention to be available.. but how?
-            // (without busy waiting, of course)
-            val continuation = intentions.receive()
-            continuation()
         }
     }
 }

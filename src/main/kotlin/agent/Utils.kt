@@ -8,3 +8,6 @@ fun log(message: String) {
 
 val CoroutineContext.agent: Agent
     get() = get(AgentContext)?.agent ?: error("Not inside an AgentContext!")
+
+val CoroutineContext.environment: Environment
+    get() = get(EnvironmentContext)?.environment ?: error("Not inside an EnvironmentContext!")
