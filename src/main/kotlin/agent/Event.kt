@@ -11,11 +11,10 @@ sealed interface Event {
         get() = Uuid.random().toString()
 }
 
-//TODO handle typed deferred
 data class AchieveEvent<T>(
     val planTrigger : String,
     val completion : CompletableDeferred<T> = CompletableDeferred(),
-    val intentionID : String? = null
+    val args: Sequence<Any?> = emptySequence()
 ) : Event
 
 

@@ -33,22 +33,25 @@ class Agent (
 
 
     /**
-     * Adds an event to the agent's queue to old.achieve a goal and suspends until the goal is achieved.
+     * Adds an event to the agent's queue to achieve a goal and suspends until the goal is achieved.
      */
-    suspend fun <T> achieve(planTrigger: String) : T {
-        val event = AchieveEvent<T>(planTrigger)
-        events.send(event)
+    suspend fun <T> achieve(planTrigger: String, vararg args : Any?) : T {
+        val event = createAndSendAchieveEvent<T>(planTrigger, args)
         //say("Waiting subgoal to complete...")
         return event.completion.await()
     }
 
     /**
-     * Adds an event to the agent's queue to old.achieve a goal and don't wait for it to complete.
+     * Adds an event to the agent's queue to achieve a goal and don't wait for it to complete.
      */
-    suspend fun alsoAchieve(planTrigger: String) {
-        val event = AchieveEvent<Any?>(planTrigger)
+    suspend fun alsoAchieve(planTrigger: String, vararg args : Any) {
+       createAndSendAchieveEvent<Any?>(planTrigger, args)
+    }
+
+    private suspend fun <T> createAndSendAchieveEvent(planTrigger: String, args: Array<out Any?>): AchieveEvent<T> {
+        val event = AchieveEvent<T>(planTrigger, CompletableDeferred(), args.asSequence())
         events.send(event)
-        //say("Waiting subgoal to complete...")
+        return event
     }
 
     /**
@@ -73,7 +76,7 @@ class Agent (
         return true
     }
 
-    private fun matchPlan(event: Event) : Pair<Plan<Any?>, CompletableDeferred<Any?>>? {
+    private fun matchPlan(event: Event) : Pair<Plan<Any?>, PlanContext<Any?>>? {
         when(event) {
             is AchieveEvent<*> -> {
                 val plan = plans.find { it.trigger == event.planTrigger }
@@ -85,14 +88,14 @@ class Agent (
                         )
                         return null
                     } //No plan found for this event
-                return Pair(plan, event.completion as CompletableDeferred<Any?>) // TODO Brutto cast
+                return plan to PlanContext(event.args, event.completion as CompletableDeferred<Any?>)  // TODO Brutto cast
             }
             is BeliefAddEvent<*> -> {
                 //TODO if a belief is added manually, this is done twice (but ignored)
                 // probably a good idea to distinguish between perceptions and manual belief addition??
                 addBelief(event.beliefName, event.value)
                 plans.find { it.trigger == "+${event.beliefName}"}?.let{
-                    return Pair(it, CompletableDeferred()) //TODO this is a fake deferred nobody is awaiting it
+                    return it to PlanContext(sequenceOf(event.value))
                 }
                 return null
             }
@@ -119,12 +122,12 @@ class Agent (
         while(true){
             //Handle an incoming event if available
             val event = events.receive()
-            //TODO I tried to move this to the old.matchPlan function but it did not work, why?...
+            //TODO I tried to move this to the matchPlan function but it did not work, why?...
             // Probably because the launched coroutine needs to be a direct child of the current scope
-            matchPlan(event)?.let { (plan, completion) ->
-                launch(context) {
-                    val x = plan()
-                    completion.complete(x) // Don't forget to complete the deferred!
+            matchPlan(event)?.let { (plan, planContext) ->
+                launch(context + planContext) {
+                    val result = plan()
+                    planContext.completion.complete(result) // Don't forget to complete the deferred!
                 }
             }
         }

@@ -1,0 +1,51 @@
+package agent.examples
+
+import agent.AchieveEvent
+import agent.Agent
+import agent.BasicMapEnvironment
+import agent.EnvironmentContext
+import agent.Plan
+import agent.agent
+import agent.args
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlin.coroutines.coroutineContext
+
+
+private val fibonacci = Agent(
+    "Fibonacci",
+    listOf(
+        Plan("start") {
+            val n = coroutineContext.args[0]
+            val agent = coroutineContext.agent
+            agent.say("Calculating Fibonacci of $n")
+            val result = agent.achieve<Int>("fibonacci", n)
+            agent.say("Fibonacci of $n is $result")
+        },
+        Plan("fibonacci") {
+            val agent = coroutineContext.agent
+            val n = coroutineContext.args[0] as Int
+            if (n <= 1) return@Plan n
+            val a = agent.achieve<Int>("fibonacci", n - 1)
+            val b = agent.achieve<Int>("fibonacci", n - 2)
+            return@Plan a + b
+        }
+    ),
+    listOf(
+        AchieveEvent("start", args = sequenceOf(10))
+    )
+)
+
+suspend fun main() = supervisorScope {
+
+    val agents = listOf(fibonacci)
+    val env = BasicMapEnvironment(agents)
+
+    val masContext = coroutineContext + EnvironmentContext(env)
+
+    agents.forEach { agent ->
+        launch (masContext) {
+            agent.run()
+        }
+    }
+}
