@@ -1,6 +1,5 @@
 package agent
 
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
@@ -12,21 +11,24 @@ class EnvironmentContext(val environment: Environment) : CoroutineContext.Elemen
     companion object Key : CoroutineContext.Key<EnvironmentContext>
 }
 
-class TestEnvironment(private val agents : List<Agent>) : Environment {
 
-    var value = 42
+class BasicMapEnvironment(private val agents : List<Agent>) : Environment {
+
+    var data : MutableMap<String, Any> = mutableMapOf()
     val mutex: Mutex = Mutex()
 
-    suspend fun sendPerceptions() {
+    suspend fun sendPerceptions(key : String, value : Any) {
         for (agent in agents) {
-            agent.events.send(BeliefAddEvent("x", value))
+            agent.events.send(
+                BeliefAddEvent(key, value)
+            )
         }
     }
 
-    suspend fun setValue(newValue: Int){
+    suspend fun set(key: String, value: Any) {
         mutex.withLock {
-            value = newValue;
-            sendPerceptions()
+            data[key] = value
+            sendPerceptions(key, value)
         }
     }
 
