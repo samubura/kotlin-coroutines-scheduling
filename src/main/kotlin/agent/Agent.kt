@@ -33,7 +33,7 @@ class Agent (
 
 
     /**
-     * Adds an event to the agent's queue to achieve a goal and suspends until the goal is achieved.
+     * Adds an event to the agent's queue to old.achieve a goal and suspends until the goal is achieved.
      */
     suspend fun <T> achieve(planTrigger: String) : T {
         val event = AchieveEvent<T>(planTrigger)
@@ -43,7 +43,7 @@ class Agent (
     }
 
     /**
-     * Adds an event to the agent's queue to achieve a goal and don't wait for it to complete.
+     * Adds an event to the agent's queue to old.achieve a goal and don't wait for it to complete.
      */
     suspend fun alsoAchieve(planTrigger: String) {
         val event = AchieveEvent<Any?>(planTrigger)
@@ -119,7 +119,7 @@ class Agent (
         while(true){
             //Handle an incoming event if available
             val event = events.receive()
-            //TODO I tried to move this to the matchPlan function but it did not work, why?...
+            //TODO I tried to move this to the old.matchPlan function but it did not work, why?...
             // Probably because the launched coroutine needs to be a direct child of the current scope
             matchPlan(event)?.let { (plan, completion) ->
                 launch(context) {

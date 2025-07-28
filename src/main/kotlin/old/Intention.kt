@@ -1,5 +1,7 @@
 @file:OptIn(ExperimentalUuidApi::class)
 
+package old
+
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

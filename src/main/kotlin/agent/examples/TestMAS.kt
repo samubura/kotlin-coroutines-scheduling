@@ -54,13 +54,13 @@ suspend fun main(): Unit = supervisorScope{
             )
         ),
 //        Agent(
-//            "Carl", plans,
+//            "Carl", old.plans,
 //            listOf(
 //                AchieveEvent("hello")
 //            )
 //        ),
 //        Agent(
-//        "Alice", plans,
+//        "Alice", old.plans,
 //        listOf(
 //            AchieveEvent("parallel"),
 //            AchieveEvent("parallel")

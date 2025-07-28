@@ -9,15 +9,15 @@ object IntentionInterceptor : ContinuationInterceptor {
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
 
         val agent = continuation.context.agent;
-        //log("${agent.name}: coroutine started")
+        //old.log("${agent.name}: coroutine started")
         return object : Continuation<T> {
             override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
                 agent.intentions.trySend {
-                    //log("${name}: resuming")
+                    //old.log("${name}: resuming")
                     continuation.resumeWith(result)
-                    //log("${name}: suspending")
+                    //old.log("${name}: suspending")
                 }
                 agent.events.trySend(StepEvent)
             }
@@ -26,7 +26,7 @@ object IntentionInterceptor : ContinuationInterceptor {
 
     override fun releaseInterceptedContinuation(continuation: Continuation<*>) {
         val name = continuation.context.agent.name
-        //log("${name}: coroutine completed")
+        //old.log("${name}: coroutine completed")
     }
 
     override val key: CoroutineContext.Key<*> = ContinuationInterceptor

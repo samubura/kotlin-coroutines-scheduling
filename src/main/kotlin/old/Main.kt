@@ -1,3 +1,5 @@
+package old
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -6,23 +8,23 @@ import kotlinx.coroutines.*
 val plans : Sequence<Plan<Any?>> = sequenceOf(
     Plan("A") {
         repeat(3) {
-            log("Plan A - step $it")
+            log("old.Plan A - step $it")
             delay(50)
             achieve("B")
         }
         delay(50)
 
-        log("Plan A DONE")
+        log("old.Plan A DONE")
     },
 
     Plan("B") {
-        log("Plan B - action")
+        log("old.Plan B - action")
         42
      },
 
     Plan("C") {
         repeat(3) {
-            log("Plan C - step $it")
+            log("old.Plan C - step $it")
             delay(500)
         }
     }
@@ -51,7 +53,7 @@ fun main() = runBlocking {
     }
 
     dispatcher.events.trySend(InternalEvent("A", intention = "Intention1"))
-    //dispatcher.events.trySend(InternalEvent("C", intention = "Intention2"))
+    //dispatcher.events.trySend(old.InternalEvent("C", intention = "Intention2"))
 
     println("Main done!")
 }

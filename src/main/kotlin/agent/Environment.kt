@@ -3,7 +3,6 @@ package agent
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
-import kotlin.random.Random
 
 interface Environment { }
 

@@ -1,5 +1,5 @@
-import PlanContext
-import PlanContextKey
+package old
+
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -13,12 +13,12 @@ fun log(message: String) {
 
 
 suspend fun achieve(planID: String, completion: CompletableDeferred<Unit> = CompletableDeferred<Unit>()) {
-    log("I want to agent.achieve plan $planID")
+    log("I want to agent.old.achieve plan $planID")
     val intentionId = coroutineContext[PlanContextKey]?.intentionId
     val interceptor = coroutineContext[ContinuationInterceptor] as TrackingContinuationInterceptor
     interceptor.dispatcher.achieve(planID, completion, intentionId)
     completion.await()
-    log("Plan $planID achieved, continuing...")
+    log("old.Plan $planID achieved, continuing...")
 }
 
 fun <T> matchPlan(event : InternalEvent<T>, plans: Sequence<Plan<T>>): Plan<T>? {
@@ -31,7 +31,7 @@ fun <T> launchPlan(plan: Plan<T>, event: InternalEvent<T>, scope: CoroutineScope
         val result = plan.body()
         event.completion.complete(result) //TODO this is not releasing the intention, why?
         //TODO i suspect this has something to do with cleaning up the intention
-        log("Plan ${plan.id} completed")
+        log("old.Plan ${plan.id} completed")
     }
 }
 

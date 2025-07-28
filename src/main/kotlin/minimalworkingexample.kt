@@ -1,5 +1,3 @@
-import agent.IntentionInterceptor
-import agent.log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -7,6 +5,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import old.log
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
@@ -62,7 +61,7 @@ fun main() {
     val interceptor = MarmellataInterceptor
     runBlocking {
 
-        //basically this would be the agent body, launching initial plans on the interceptor
+        //basically this would be the agent body, launching initial old.plans on the interceptor
         launch( interceptor) {
             launch {plan("A")}
             launch {plan("B")}
@@ -73,7 +72,7 @@ fun main() {
         launch(Dispatchers.Default){
             while(true){
                 log("Step ${step++}");
-                //if there is a subgoal to agent.achieve, launch the corresponding subplan
+                //if there is a subgoal to agent.old.achieve, launch the corresponding subplan
                 if(deferredList.isNotEmpty()){
                     val deferred = deferredList.removeFirst()
                     launch(interceptor){
@@ -86,10 +85,10 @@ fun main() {
                 //if there is an intention available to continue, run it
 //                val continuation = channel.tryReceive()
 //                if(continuation.isSuccess){
-//                    agent.log("Continuation available, running...")
+//                    agent.old.log("Continuation available, running...")
 //                    continuation.getOrNull()?.invoke() //run the continuation
 //                } else {
-//                    agent.log("No continuation available...")
+//                    agent.old.log("No continuation available...")
 //                    delay(200)
 //                }
                 //fake delay for easy read
@@ -118,7 +117,7 @@ object MarmellataInterceptor : ContinuationInterceptor {
     }
 
     override fun releaseInterceptedContinuation(continuation: Continuation<*>) {
-        //agent.log("coroutine completed")
+        //agent.old.log("coroutine completed")
     }
 
     override val key: CoroutineContext.Key<*> = ContinuationInterceptor
