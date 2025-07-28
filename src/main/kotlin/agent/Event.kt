@@ -12,9 +12,9 @@ sealed interface Event {
 }
 
 //TODO handle typed deferred
-data class AchieveEvent(
+data class AchieveEvent<T>(
     val planTrigger : String,
-    val completion : CompletableDeferred<Unit> = CompletableDeferred(),
+    val completion : CompletableDeferred<T> = CompletableDeferred(),
     val intentionID : String? = null
 ) : Event
 

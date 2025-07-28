@@ -10,8 +10,8 @@ import kotlin.coroutines.CoroutineContext
 
 class Agent (
     val name: String,
-    val plans: Map<String, suspend () -> Unit>,
-    val initialGoals: List<AchieveEvent>,
+    val plans: List<Plan<Any?>>,
+    val initialGoals: List<AchieveEvent<Any?>> = listOf(),
     val beliefs: MutableMap<String, Any> = mutableMapOf()
 ) {
     //TODO the channel is effective, but it does not allow for
@@ -19,7 +19,6 @@ class Agent (
     // now intentions are executed on a first-come-first-served basis
     val intentions: Channel<() -> Unit> = Channel(Channel.Factory.UNLIMITED)
 
-    //val events: MutableList<Event> = goals.toMutableList()
     val events: Channel<Event> = Channel(Channel.Factory.UNLIMITED)
 
     val context = IntentionInterceptor +
@@ -36,11 +35,11 @@ class Agent (
     /**
      * Adds an event to the agent's queue to achieve a goal and suspends until the goal is achieved.
      */
-    suspend fun achieve(planTrigger: String) {
-        val event = AchieveEvent(planTrigger)
+    suspend fun <T> achieve(planTrigger: String) : T {
+        val event = AchieveEvent<T>(planTrigger)
         events.send(event)
         //say("Waiting subgoal to complete...")
-        event.completion.await()
+        return event.completion.await()
     }
 
     /**
@@ -57,7 +56,7 @@ class Agent (
     private fun addBelief(beliefName: String, value: Any) : Boolean {
         if(beliefs.contains(beliefName)){
             if(beliefs[beliefName] == value){
-                say("Belief ${beliefName} already exists with value ${value}, ignoring.")
+                say("Belief $beliefName already exists with value $value, ignoring.")
                 return false
             }
         }
@@ -65,11 +64,10 @@ class Agent (
         return true
     }
 
-
-    private fun matchPlan(event: Event) : Pair<suspend () -> Unit, CompletableDeferred<Unit>>? {
+    private fun matchPlan(event: Event) : Pair<Plan<Any?>, CompletableDeferred<Any?>>? {
         when(event) {
-            is AchieveEvent -> {
-                val plan = plans[event.planTrigger]
+            is AchieveEvent<*> -> {
+                val plan = plans.find { it.trigger == event.planTrigger }
                     ?: run {
                         say("No plan found for event: ${event.planTrigger}")
                         // TODO this now completely breaks the agent, but it should not...
@@ -78,22 +76,22 @@ class Agent (
                         )
                         return null
                     } //No plan found for this event
-                return Pair(plan, event.completion)
+                return Pair(plan, event.completion as CompletableDeferred<Any?>) // TODO Brutto cast
             }
             is BeliefAddEvent<*> -> {
                 //TODO if a belief is added manually, this is done twice (but ignored)
                 // probably a good idea to distinguish between perceptions and manual belief addition??
                 addBelief(event.beliefName, event.value)
-                plans["+${event.beliefName}"]?.let{
+                plans.find { it.trigger == "+${event.beliefName}"}?.let{
                     return Pair(it, CompletableDeferred()) //TODO this is a fake deferred nobody is awaiting it
                 }
                 return null
             }
             is StepEvent -> {
-                //say("I have a continuation to run...")
                 intentions.tryReceive().getOrNull()?.let{ it()}
                 return null
             }
+            //TODO unnecessary, but useful now if I want to add events and not break compilation
             else -> {
                 log("Unknown event type: $event")
                 return null //No plan for unknown events
@@ -102,6 +100,7 @@ class Agent (
     }
 
 
+    //TODO I'm not sure if coroutineScope is the right choice here...
     suspend fun run() = coroutineScope {
 
         // Init the agent
@@ -115,8 +114,8 @@ class Agent (
             // Probably because the launched coroutine needs to be a direct child of the current scope
             matchPlan(event)?.let { (plan, completion) ->
                 launch(context) {
-                    plan()
-                    completion.complete(Unit) // Don't forget to complete the deferred!
+                    val x = plan()
+                    completion.complete(x) // Don't forget to complete the deferred!
                 }
             }
         }

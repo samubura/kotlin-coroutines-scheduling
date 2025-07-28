@@ -1,38 +1,41 @@
-package agent
+package agent.examples
 
+import agent.AchieveEvent
+import agent.Agent
+import agent.Plan
+import agent.agent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import kotlin.collections.mapOf
 import kotlin.coroutines.coroutineContext
 
 
-val plans: Map<String, suspend () -> Unit> = mapOf(
-    "hello" to {
+val plans: List<Plan<Any?>> = listOf(
+    Plan("hello") {
         val agent = coroutineContext.agent
         agent.say("Hello")
         delay(1000)
         agent.say("World!")
-        agent.achieve("goodbye")
+        agent.achieve<Unit>("goodbye")
         agent.say("DONE")
     },
-    "goodbye" to {
+    Plan("goodbye") {
         val agent = coroutineContext.agent
         agent.say("Goodbye")
         delay(1000)
         agent.say("See you later!")
     },
-    "break" to {
+    Plan("break") {
         val agent = coroutineContext.agent
         agent.achieve("xyz")
     },
-    "parallel" to {
+    Plan("parallel") {
         val agent = coroutineContext.agent
         agent.say("before")
         delay(1000)
         agent.say("after")
     },
-    "+x" to {
+    Plan("+x") {
         val agent = coroutineContext.agent
         agent.say("Now I believe that x is ${agent.beliefs["x"]}")
     }
@@ -45,8 +48,8 @@ suspend fun main(): Unit = supervisorScope{
 
     val agents = listOf(
         Agent(
-        "Bob", plans,
-        listOf(
+            "Bob", plans,
+            listOf(
                 AchieveEvent("hello")
             )
         ),
