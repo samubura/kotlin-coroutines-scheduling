@@ -43,6 +43,15 @@ class Agent (
     }
 
     /**
+     * Adds an event to the agent's queue to achieve a goal and don't wait for it to complete.
+     */
+    suspend fun alsoAchieve(planTrigger: String) {
+        val event = AchieveEvent<Any?>(planTrigger)
+        events.send(event)
+        //say("Waiting subgoal to complete...")
+    }
+
+    /**
      * Adds an event to the agent's queue to add a belief
      */
     suspend fun believe(beliefName: String, value: Any) {

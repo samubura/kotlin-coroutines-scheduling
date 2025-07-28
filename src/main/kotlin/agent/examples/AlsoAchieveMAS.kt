@@ -9,43 +9,48 @@ import agent.agent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+
 import kotlin.random.Random
 
 
 suspend fun main() = supervisorScope {
-
-    val test = Agent(
+    val agent = Agent(
         "TestAgent",
         listOf(
             Plan("start") {
                 val agent = kotlin.coroutines.coroutineContext.agent
                 agent.say("Starting...")
-                val x = agent.achieve<Int>("x")
-                val y = agent.achieve<Int>("y")
-                agent.say("Result: $x + $y = ${x + y}")
+                agent.alsoAchieve("task1")
+                agent.alsoAchieve("task2")
+                agent.say("Tasks started, but I'm not waiting for them to finish.")
+                agent.say("I can do other things while tasks are running.")
+                repeat(10) {
+                    agent.say("Doing something else... $it")
+                    delay(200)
+                }
+                agent.say("I'm done, but maybe other tasks are still running")
+
             },
-            Plan("x") {
+            Plan("task1") {
                 val agent = kotlin.coroutines.coroutineContext.agent
-                agent.say("Fetching x...")
+                agent.say("Executing task 1...")
                 delay(1000)
-                Random.nextInt(1,100)
-                //TODO even if the achieve is typed, you have no guarantee that the result will be of that type
-                // and the cast will break. Try uncomment the next line to see the error
-                //"HELLO"
+                agent.say("Task 1 completed!")
             },
-            Plan("y") {
+            Plan("task2") {
                 val agent = kotlin.coroutines.coroutineContext.agent
-                agent.say("Fetching y...")
+                agent.say("Executing task 2...")
                 delay(1000)
-                Random.nextInt(1,100)
+                agent.say("Task 2 completed!")
             }
+
         ),
         listOf(
             AchieveEvent("start")
         )
     )
 
-    val agents = listOf(test)
+    val agents = listOf(agent)
     val env = BasicMapEnvironment(agents)
 
     val masContext = coroutineContext + EnvironmentContext(env)
