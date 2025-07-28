@@ -25,12 +25,17 @@ class Agent (
     val context = IntentionInterceptor +
             AgentContext(this)
 
+    /**
+     * Logs a message with the agent's name.
+     */
     fun say(message: String){
         log("$name: $message")
     }
 
-    // This is an Agent Action that can be used to add a new Event to the Agent's event queue
-    // and wait for the corresponding goal to be achieved.
+
+    /**
+     * Adds an event to the agent's queue to achieve a goal and suspends until the goal is achieved.
+     */
     suspend fun achieve(planTrigger: String) {
         val event = AchieveEvent(planTrigger)
         events.send(event)
@@ -38,17 +43,36 @@ class Agent (
         event.completion.await()
     }
 
+    /**
+     * Adds an event to the agent's queue to add a belief
+     */
     suspend fun believe(beliefName: String, value: Any) {
-        val event = BeliefAddEvent(beliefName, value)
-        events.send(event)
+        val added = addBelief(beliefName, value)
+        if(added) {
+            val event = BeliefAddEvent(beliefName, value)
+            events.send(event)
+        }
     }
 
-    fun matchPlan(event: Event) : Pair<suspend () -> Unit, CompletableDeferred<Unit>>? {
+    private fun addBelief(beliefName: String, value: Any) : Boolean {
+        if(beliefs.contains(beliefName)){
+            if(beliefs[beliefName] == value){
+                say("Belief ${beliefName} already exists with value ${value}, ignoring.")
+                return false
+            }
+        }
+        beliefs[beliefName] = value
+        return true
+    }
+
+
+    private fun matchPlan(event: Event) : Pair<suspend () -> Unit, CompletableDeferred<Unit>>? {
         when(event) {
             is AchieveEvent -> {
                 val plan = plans[event.planTrigger]
                     ?: run {
                         say("No plan found for event: ${event.planTrigger}")
+                        // TODO this now completely breaks the agent, but it should not...
                         event.completion.completeExceptionally(
                             IllegalStateException("No plan found for event: ${event.planTrigger}")
                         )
@@ -57,15 +81,11 @@ class Agent (
                 return Pair(plan, event.completion)
             }
             is BeliefAddEvent<*> -> {
-                if(beliefs.contains(event.beliefName)){
-                    if(beliefs[event.beliefName] == event.value){
-                        say("Belief ${event.beliefName} already exists with value ${event.value}, ignoring.")
-                        return null // No need to add the belief, it already exists
-                    }
-                }
-                beliefs[event.beliefName] = event.value
+                //TODO if a belief is added manually, this is done twice (but ignored)
+                // probably a good idea to distinguish between perceptions and manual belief addition??
+                addBelief(event.beliefName, event.value)
                 plans["+${event.beliefName}"]?.let{
-                    return Pair(it, CompletableDeferred()) // TODO this is a fake deferred, this won't be awaited
+                    return Pair(it, CompletableDeferred()) //TODO this is a fake deferred nobody is awaiting it
                 }
                 return null
             }
@@ -81,6 +101,7 @@ class Agent (
         }
     }
 
+
     suspend fun run() = coroutineScope {
 
         // Init the agent
@@ -90,7 +111,8 @@ class Agent (
         while(true){
             //Handle an incoming event if available
             val event = events.receive()
-            //TODO I tried to move this to a suspend function but it did not work, why?
+            //TODO I tried to move this to the matchPlan function but it did not work, why?...
+            // Probably because the launched coroutine needs to be a direct child of the current scope
             matchPlan(event)?.let { (plan, completion) ->
                 launch(context) {
                     plan()
