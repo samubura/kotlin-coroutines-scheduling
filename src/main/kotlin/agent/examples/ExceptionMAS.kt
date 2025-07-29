@@ -2,7 +2,6 @@ package agent.examples
 
 import agent.AchieveEvent
 import agent.Agent
-import agent.BasicMapEnvironment
 import agent.BreakingEnvironment
 import agent.EnvironmentContext
 import agent.Plan
@@ -16,12 +15,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlin.coroutines.coroutineContext
-import kotlin.random.Random
 
 
 private val test = Agent(
     "TestAgent",
     listOf(
+        // TODO just to show that a plan breaking does not break the whole agent
         Plan("count"){
             val agent = coroutineContext.agent
             agent.say("Counting to 10...")
@@ -34,21 +33,25 @@ private val test = Agent(
         Plan("start") {
             val agent = coroutineContext.agent
             val environment = coroutineContext.environment as BreakingEnvironment
-            agent.say("Starting subgoal...")
-            agent.achieve<Unit>("subgoalCatch")
-            agent.say("Starting subgoal...")
+//            agent.say("Starting subgoal...")
+//            agent.achieve<Unit>("subgoalCatch")
+//            agent.say("Subgoal completed")
 
-            //TODO catching exceptions in subgoals won't usually work... but now it does thanks to the CoroutineExceptionHandler
-            // propagating the exceptions in a controlled way...
-            try {
-                agent.achieve("subgoalNoCatch")
-            } catch(e: Exception) {
-                agent.say("Caught an exception in subgoalNoCatch: ${e.message}")
-            }
+            //TODO no exception is caught here, because the subgoal is recovered..
+//            agent.say("Starting subgoal...")
+//            try {
+//                agent.achieve<Unit>("subgoalNoCatch")
+//            } catch (e: Exception) {
+//                agent.say("Caught an exception in subgoal: ${e.message}")
+//            }
             agent.achieve<Unit>("subgoalNoCatch")
             agent.say("DONE")
 
         },
+        //TODO This is the way to catch exceptions directly when they happen in actions
+        // the logic to handle the error is within the same plan
+        // it is easy, but requires explicit handling, sometimes we want to rely on the classic
+        // BDI way to search for recovery plans automatically instead of manually declaring what to do
         Plan("subgoalCatch") {
             val agent = coroutineContext.agent
             val environment = coroutineContext.environment as BreakingEnvironment
@@ -57,14 +60,19 @@ private val test = Agent(
                 environment.action()
             } catch (e: Exception) {
                 agent.say("Caught an exception: ${e.message}")
+                agent.achieve<Unit>("recover")
             }
         },
+        //TODO This plan will break, ideally the BDI engine should catch it, try to recover
+        // and complete with success the subgoal if it manages to find a recovery plan
         Plan("subgoalNoCatch") {
             val agent = coroutineContext.agent
             val environment = coroutineContext.environment as BreakingEnvironment
             agent.say("I'm trying to perform an action...")
             environment.action()
         },
+        //TODO this is a fake recovery plan for testing purposes
+        // the agent is hardcoded to always use this recovery regardless of what failed
         Plan("recover"){
             val agent = coroutineContext.agent
             agent.say("Recovering...")
@@ -73,37 +81,38 @@ private val test = Agent(
         }
     ),
     listOf(
-        AchieveEvent("start"), AchieveEvent("count")
+        AchieveEvent("start"),
+        //AchieveEvent("count")
     )
 )
 
+private val counter = Agent(
+    "Counter",
+    listOf(
+        Plan("count"){
+            val agent = coroutineContext.agent
+            agent.say("Counting to 10...")
+            for (i in 1..10) {
+                delay(1000)
+                agent.say("Count: $i")
+            }
+            agent.say("Done counting!")
+        },
+    ),
+    listOf(
+        AchieveEvent("count")
+    )
+)
 
 suspend fun main() = supervisorScope {
 
-    val agents = listOf(test)
+    val agents = listOf(
+        test,
+        //counter
+    )
     val env = BreakingEnvironment(agents)
 
-    //TODO This is one way to handle exceptions..
-    // I guess it makes more sense to make it part of the agent's context, rather than the MAS context..
-    // Anyway, this is not ideal, the CoroutineExceptionHandler is not really designed to recover from exceptions,
-    // and is designed as a "last resort" to handle uncaught exceptions in coroutines.
-    val handler = CoroutineExceptionHandler(
-        { context, exception ->
-            val agent = context.agent
-            agent.say("EXCEPTION! ${exception.message}")
-            //TODO attempt to recover from the exception
-
-            //TODO THIS IS WORKING BUT IT IS VERY BAD AND TYPES ARE EXPLODING
-            // also what is
-            launch {
-                val result = agent.achieve<Unit>("recover", context.args)
-                (context.planContext.completion as CompletableDeferred<Unit>).complete(result)
-            }
-            //context.planContext.completion.completeExceptionally(exception)
-        }
-    )
-
-    val masContext = coroutineContext + EnvironmentContext(env) + handler
+    val masContext = coroutineContext + EnvironmentContext(env)
 
     agents.forEach { agent ->
         launch (masContext) {

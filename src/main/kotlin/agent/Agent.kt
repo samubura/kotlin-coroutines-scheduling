@@ -4,6 +4,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlin.coroutines.CoroutineContext
@@ -102,7 +103,7 @@ class Agent (
                 return null
             }
             is StepEvent -> {
-                //TODO I'm not sure this is correct...
+                // TODO here I am running the continuation for one step
                 intentions.tryReceive().getOrNull()?.let{
                     it()
                 }
@@ -117,9 +118,10 @@ class Agent (
     }
 
 
-    // TODO supervisorScope since child coroutines failing should not affect the parent or siblings
+    //TODO supervisorScope since child coroutines failing should not affect the parent or siblings
+    // This coroutine is the main loop of the agent
+    // and is run in the MAS context
     suspend fun run() = supervisorScope {
-
         // Init the agent
         initialGoals.forEach{events.send(it)}
 
@@ -130,19 +132,22 @@ class Agent (
             //TODO I tried to move this to the matchPlan function but it did not work, why?...
             // Probably because the launched coroutine needs to be a direct child of the current scope
             matchPlan(event)?.let { (plan, planContext) ->
-                launch(context + planContext) {
-                    val result = plan()
-                    planContext.completion.complete(result) // Don't forget to complete the deferred!
-//                    try{
-//                        val result = async {plan()}.await()
-//                        planContext.completion.complete(result) // Don't forget to complete the deferred!
-//                    } catch (e: Exception){
-//                        say("Error in plan ${plan.trigger}: ${e.message}")
-//                        // TODO handle the error properly
-//                        //planContext.completion.completeExceptionally(e)
-//                        planContext.completion.complete(Unit)
-//                    }
+                //TODO Every plan is run in a new coroutine,
+                // which is run in the agent contex + its own plan context
+                val job = launch(context + planContext) {
+                    try{
+                        val result = plan()
+                        planContext.completion.complete(result) // Don't forget to complete the deferred!
+                    } catch (e: Exception) {
+                        say("ERROR in ${plan.trigger}: ${e.message}")
+                        //TODO use a real recovery strategy
+                        val result = achieve<Unit>("recover")
+                        planContext.completion.complete(result)
+                    }
                 }
+                //TODO I should store the job, and use it to cancel the intention if needed...
+                // and probably use it to chain coroutines within the same stack as children of the same job...
+                // because right now they are siblings, chained by deferred completion but have no parent-child relationship
             }
         }
     }
