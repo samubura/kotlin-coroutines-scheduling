@@ -14,7 +14,7 @@ sealed interface Event {
 data class AchieveEvent<T>(
     val planTrigger : String,
     val completion : CompletableDeferred<T> = CompletableDeferred(),
-    val args: Sequence<Any?> = emptySequence()
+    val args: List<Any?> = emptyList()
 ) : Event
 
 

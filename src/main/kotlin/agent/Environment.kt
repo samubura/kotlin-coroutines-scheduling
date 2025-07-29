@@ -1,5 +1,6 @@
 package agent
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
@@ -29,6 +30,18 @@ class BasicMapEnvironment(private val agents : List<Agent>) : Environment {
         mutex.withLock {
             data[key] = value
             sendPerceptions(key, value)
+        }
+    }
+
+}
+
+class BreakingEnvironment(private val agents : List<Agent>) : Environment {
+    val mutex: Mutex = Mutex()
+
+    suspend fun action() {
+        mutex.withLock {
+            delay(100)
+            throw RuntimeException("Action failed")
         }
     }
 

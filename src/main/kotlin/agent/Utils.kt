@@ -13,4 +13,7 @@ val CoroutineContext.environment: Environment
     get() = get(EnvironmentContext)?.environment ?: error("Not inside an EnvironmentContext!")
 
 val CoroutineContext.args : List<Any?>
-    get() = get(PlanContext)?.args?.toList() ?: emptyList()
+    get() = get(PlanContext)?.args ?: emptyList()
+
+val CoroutineContext.planContext : PlanContext<*>
+    get() = get(PlanContext) ?: error("Not inside a PlanContext!")

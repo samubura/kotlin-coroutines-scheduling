@@ -32,7 +32,7 @@ private val fibonacci = Agent(
         }
     ),
     listOf(
-        AchieveEvent("start", args = sequenceOf(10))
+        AchieveEvent("start", args = listOf(10))
     )
 )
 

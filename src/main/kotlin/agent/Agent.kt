@@ -1,9 +1,11 @@
 package agent
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlin.coroutines.CoroutineContext
 
 
@@ -49,7 +51,7 @@ class Agent (
     }
 
     private suspend fun <T> createAndSendAchieveEvent(planTrigger: String, args: Array<out Any?>): AchieveEvent<T> {
-        val event = AchieveEvent<T>(planTrigger, CompletableDeferred(), args.asSequence())
+        val event = AchieveEvent<T>(planTrigger, CompletableDeferred(), args.asList())
         events.send(event)
         return event
     }
@@ -81,7 +83,7 @@ class Agent (
             is AchieveEvent<*> -> {
                 val plan = plans.find { it.trigger == event.planTrigger }
                     ?: run {
-                        say("No plan found for event: ${event.planTrigger}")
+                        //say("No plan found for event: ${event.planTrigger}")
                         // TODO this now completely breaks the agent, but it should not...
                         event.completion.completeExceptionally(
                             IllegalStateException("No plan found for event: ${event.planTrigger}")
@@ -95,12 +97,15 @@ class Agent (
                 // probably a good idea to distinguish between perceptions and manual belief addition??
                 addBelief(event.beliefName, event.value)
                 plans.find { it.trigger == "+${event.beliefName}"}?.let{
-                    return it to PlanContext(sequenceOf(event.value))
+                    return it to PlanContext(listOf(event.value))
                 }
                 return null
             }
             is StepEvent -> {
-                intentions.tryReceive().getOrNull()?.let{ it()}
+                //TODO I'm not sure this is correct...
+                intentions.tryReceive().getOrNull()?.let{
+                    it()
+                }
                 return null
             }
             //TODO unnecessary, but useful now if I want to add events and not break compilation
@@ -112,8 +117,8 @@ class Agent (
     }
 
 
-    //TODO I'm not sure if coroutineScope is the right choice here...
-    suspend fun run() = coroutineScope {
+    // TODO supervisorScope since child coroutines failing should not affect the parent or siblings
+    suspend fun run() = supervisorScope {
 
         // Init the agent
         initialGoals.forEach{events.send(it)}
@@ -128,6 +133,15 @@ class Agent (
                 launch(context + planContext) {
                     val result = plan()
                     planContext.completion.complete(result) // Don't forget to complete the deferred!
+//                    try{
+//                        val result = async {plan()}.await()
+//                        planContext.completion.complete(result) // Don't forget to complete the deferred!
+//                    } catch (e: Exception){
+//                        say("Error in plan ${plan.trigger}: ${e.message}")
+//                        // TODO handle the error properly
+//                        //planContext.completion.completeExceptionally(e)
+//                        planContext.completion.complete(Unit)
+//                    }
                 }
             }
         }
