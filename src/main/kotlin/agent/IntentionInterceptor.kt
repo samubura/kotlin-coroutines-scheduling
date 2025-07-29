@@ -14,7 +14,7 @@ object IntentionInterceptor : ContinuationInterceptor {
             override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
-                agent.intentions.trySend {
+                agent.continuations.trySend {
                     //agent.say("resuming")
                     continuation.resumeWith(result)
                     //agent.say("suspending")

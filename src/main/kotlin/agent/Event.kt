@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalUuidApi::class)
+
 
 package agent
 
@@ -7,14 +7,16 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 sealed interface Event {
-    val id : String
+    @OptIn(ExperimentalUuidApi::class)
+    val id: String
         get() = Uuid.random().toString()
 }
 
 data class AchieveEvent<T>(
     val planTrigger : String,
     val completion : CompletableDeferred<T> = CompletableDeferred(),
-    val args: List<Any?> = emptyList()
+    val args: List<Any?> = emptyList(),
+    val intention: Intention? = null
 ) : Event
 
 
