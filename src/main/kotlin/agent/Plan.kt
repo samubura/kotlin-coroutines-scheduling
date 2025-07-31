@@ -14,3 +14,6 @@ class PlanContext<Result: Any?>(val args : List<Any?> = emptyList(), val complet
     override val key: CoroutineContext.Key<PlanContext<*>> = Key
     companion object Key : CoroutineContext.Key<PlanContext<*>>
 }
+
+
+//TODO plan hierarchy to distinghuish the matching events (instead of using the trigger string)

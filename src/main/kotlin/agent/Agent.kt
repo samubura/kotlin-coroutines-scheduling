@@ -168,6 +168,7 @@ class Agent (
      * Executes one step of the first available intention.
      */
     private fun step() {
+        //TODO it should not run an intention that has been cancelled
         continuations.tryReceive().getOrNull()?.let{
             it()
         }
@@ -182,6 +183,7 @@ class Agent (
                 val result = plan(this)
                 planContext.completion.complete(result) // Don't forget to complete the deferred once the plan is done!
             } catch (e: CancellationException) {
+                //TODO if we fix the step, this should never happen..
                 say("OK, the intention was dropped while ${plan.trigger} was suspended in ")
             }
             catch (e: Exception) {
