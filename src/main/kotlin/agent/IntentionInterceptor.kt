@@ -8,8 +8,8 @@ object IntentionInterceptor : ContinuationInterceptor {
 
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
 
-        val agent = continuation.context.agent;
-        //log("${agent.name}: coroutine started")
+        val agent = continuation.context[AgentContext]!!.agent
+        //agent.say("coroutine started")
         return object : Continuation<T> {
             override val context: CoroutineContext = continuation.context
 
@@ -25,8 +25,8 @@ object IntentionInterceptor : ContinuationInterceptor {
     }
 
     override fun releaseInterceptedContinuation(continuation: Continuation<*>) {
-        val name = continuation.context.agent.name
-        //log("${name}: coroutine completed")
+        // val agent =  continuation.context[AgentContext]!!.agent
+        //agent.say("coroutine completed")
     }
 
     override val key: CoroutineContext.Key<*> = ContinuationInterceptor

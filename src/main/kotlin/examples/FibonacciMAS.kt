@@ -1,12 +1,12 @@
-package agent.examples
+package examples
 
 import agent.AchieveEvent
 import agent.Agent
-import agent.BasicMapEnvironment
-import agent.EnvironmentContext
 import agent.Plan
-import agent.agent
-import agent.args
+import agent
+import args
+import environment.BasicMapEnvironment
+import environment.EnvironmentContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlin.coroutines.coroutineContext
@@ -16,15 +16,13 @@ private val fibonacci = Agent(
     "Fibonacci",
     listOf(
         Plan("start") {
-            val n = coroutineContext.args[0]
-            val agent = coroutineContext.agent
+            val n = args[0]
             agent.say("Calculating Fibonacci of $n")
             val result = agent.achieve<Int>("fibonacci", n)
             agent.say("Fibonacci of $n is $result")
         },
         Plan("fibonacci") {
-            val agent = coroutineContext.agent
-            val n = coroutineContext.args[0] as Int
+            val n = args[0] as Int
             if (n <= 1) return@Plan n
             val a = agent.achieve<Int>("fibonacci", n - 1)
             val b = agent.achieve<Int>("fibonacci", n - 2)

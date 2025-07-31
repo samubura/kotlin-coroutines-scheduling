@@ -1,5 +1,7 @@
-package agent
+package environment
 
+import agent.Agent
+import agent.BeliefAddEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

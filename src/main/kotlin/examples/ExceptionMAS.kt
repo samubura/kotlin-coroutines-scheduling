@@ -1,16 +1,12 @@
-package agent.examples
+package examples
 
 import agent.AchieveEvent
 import agent.Agent
-import agent.BreakingEnvironment
-import agent.EnvironmentContext
 import agent.Plan
-import agent.agent
-import agent.args
-import agent.environment
-import agent.planContext
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineExceptionHandler
+import agent
+import environment
+import environment.BreakingEnvironment
+import environment.EnvironmentContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -22,7 +18,6 @@ private val test = Agent(
     listOf(
         // TODO just to show that a plan breaking does not break the whole agent
         Plan("count"){
-            val agent = coroutineContext.agent
             agent.say("Counting to 10...")
             for (i in 1..10) {
                 delay(1000)
@@ -31,8 +26,7 @@ private val test = Agent(
             agent.say("Done counting!")
         },
         Plan("start") {
-            val agent = coroutineContext.agent
-            val environment = coroutineContext.environment as BreakingEnvironment
+            val environment = environment<BreakingEnvironment>()
 //            agent.say("Starting subgoal...")
 //            agent.achieve<Unit>("subgoalCatch")
 //            agent.say("Subgoal completed")
@@ -53,8 +47,7 @@ private val test = Agent(
         // it is easy, but requires explicit handling, sometimes we want to rely on the classic
         // BDI way to search for recovery plans automatically instead of manually declaring what to do
         Plan("subgoalCatch") {
-            val agent = coroutineContext.agent
-            val environment = coroutineContext.environment as BreakingEnvironment
+            val environment = environment<BreakingEnvironment>()
             agent.say("I'm trying to perform an action with TryCatch...")
             try{
                 environment.action()
@@ -66,15 +59,13 @@ private val test = Agent(
         //TODO This plan will break, ideally the BDI engine should catch it, try to recover
         // and complete with success the subgoal if it manages to find a recovery plan
         Plan("subgoalNoCatch") {
-            val agent = coroutineContext.agent
-            val environment = coroutineContext.environment as BreakingEnvironment
+            val environment = environment<BreakingEnvironment>()
             agent.say("I'm trying to perform an action...")
             environment.action()
         },
         //TODO this is a fake recovery plan for testing purposes
         // the agent is hardcoded to always use this recovery regardless of what failed
         Plan("recover"){
-            val agent = coroutineContext.agent
             agent.say("Recovering...")
             delay(1000)
             agent.say("Successfully recovered!")
@@ -90,7 +81,6 @@ private val counter = Agent(
     "Counter",
     listOf(
         Plan("count"){
-            val agent = coroutineContext.agent
             agent.say("Counting to 10...")
             for (i in 1..10) {
                 delay(1000)

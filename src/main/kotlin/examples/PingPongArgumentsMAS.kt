@@ -1,13 +1,14 @@
-package agent.examples
+package examples
 
 import agent.AchieveEvent
 import agent.Agent
-import agent.BasicMapEnvironment
-import agent.EnvironmentContext
 import agent.Plan
-import agent.agent
-import agent.args
-import agent.environment
+import agent
+import args
+import environment
+import environment.BasicMapEnvironment
+import environment.BreakingEnvironment
+import environment.EnvironmentContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -17,18 +18,16 @@ private val pinger = Agent(
     "Pinger",
     listOf(
         Plan("start") {
-            val agent = coroutineContext.agent
-            val env = coroutineContext.environment as BasicMapEnvironment
+            val env = environment<BasicMapEnvironment>()
             val x = 0
             env.set("ping", x)
             agent.say("Ping ${x}!")
         },
         Plan("+pong") {
-            val agent = coroutineContext.agent
-            val env = coroutineContext.environment as BasicMapEnvironment
+            val env = environment<BasicMapEnvironment>()
             delay(500)
             // TODO the first argument of a belief update plan is the belief value
-            val x = coroutineContext.args[0] as Int + 1
+            val x = args[0] as Int + 1
             env.set("ping", x)
             agent.say("Ping ${x}!")
         }
@@ -42,10 +41,9 @@ private val ponger = Agent(
     "Ponger",
     listOf(
         Plan("+ping") {
-            val agent = coroutineContext.agent
-            val env = coroutineContext.environment as BasicMapEnvironment
+            val env = environment<BasicMapEnvironment>()
             delay(500)
-            val x = coroutineContext.args[0] as Int + 1
+            val x = args[0] as Int + 1
             env.set("pong", x)
             agent.say("Pong ${x}!")
         }

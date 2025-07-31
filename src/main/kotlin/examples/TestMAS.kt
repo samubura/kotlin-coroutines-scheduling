@@ -1,9 +1,9 @@
-package agent.examples
+package examples
 
 import agent.AchieveEvent
 import agent.Agent
 import agent.Plan
-import agent.agent
+import agent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -12,7 +12,6 @@ import kotlin.coroutines.coroutineContext
 
 val plans: List<Plan<Any?>> = listOf(
     Plan("hello") {
-        val agent = coroutineContext.agent
         agent.say("Hello")
         delay(1000)
         agent.say("World!")
@@ -20,23 +19,19 @@ val plans: List<Plan<Any?>> = listOf(
         agent.say("DONE")
     },
     Plan("goodbye") {
-        val agent = coroutineContext.agent
         agent.say("Goodbye")
         delay(1000)
         agent.say("See you later!")
     },
     Plan("break") {
-        val agent = coroutineContext.agent
         agent.achieve("xyz")
     },
     Plan("parallel") {
-        val agent = coroutineContext.agent
         agent.say("before")
         delay(1000)
         agent.say("after")
     },
     Plan("+x") {
-        val agent = coroutineContext.agent
         agent.say("Now I believe that x is ${agent.beliefs["x"]}")
     }
 )

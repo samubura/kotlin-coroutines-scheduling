@@ -8,6 +8,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import log
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 
@@ -178,7 +179,7 @@ class Agent (
     private fun CoroutineScope.launchPlan(plan: Plan<Any?>, intentionContext: IntentionContext, planContext: PlanContext<Any?>) {
         this.launch(agentContext + intentionContext + planContext + intentionContext.job) {
             try{
-                val result = plan()
+                val result = plan(this)
                 planContext.completion.complete(result) // Don't forget to complete the deferred once the plan is done!
             } catch (e: CancellationException) {
                 say("OK, the intention was dropped while ${plan.trigger} was suspended in ")

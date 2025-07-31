@@ -1,14 +1,12 @@
-package agent.examples
+package examples
 
 import agent.AchieveEvent
 import agent.Agent
-import agent.BreakingEnvironment
-import agent.EnvironmentContext
 import agent.Intention
 import agent.Plan
-import agent.agent
-import agent.args
-import agent.log
+import agent
+import args
+import log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -20,7 +18,7 @@ private val counter = Agent(
     "Counter",
     listOf(
         Plan("count"){
-            val agent = coroutineContext.agent
+
             agent.say("Counting to 10...")
             agent.alsoAchieve("alsoCount") // This will live on in a different intention
             for (i in 1..10) {
@@ -31,7 +29,6 @@ private val counter = Agent(
             agent.say("Done counting!")
         },
         Plan("alsoCount"){
-            val agent = coroutineContext.agent
             agent.say("alsoCounting to 10...")
             for (i in 1..10) {
                 delay(1000)
@@ -40,9 +37,8 @@ private val counter = Agent(
             agent.say("Done counting!")
         },
         Plan("drop"){
-            val agent = coroutineContext.agent
             agent.say("Wait some time...")
-            delay(coroutineContext.args[0] as Long)
+            delay(args[0] as Long)
             agent.say(agent.intentions.map {it.intention}.toString())
             agent.dropIntention(intention)
             agent.say("Dropped Intention!")
@@ -58,7 +54,6 @@ private val secondCounter = Agent(
     "SecondCounter",
     listOf(
         Plan("count"){
-            val agent = coroutineContext.agent
             agent.say("Counting to 10...")
             for (i in 1..10) {
                 delay(1000)
@@ -74,9 +69,6 @@ private val secondCounter = Agent(
 
 suspend fun main(): Unit = supervisorScope {
 
-    val agents = listOf(
-        counter
-    )
 
     val masContext = coroutineContext
 

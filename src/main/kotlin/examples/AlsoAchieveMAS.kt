@@ -1,23 +1,20 @@
-package agent.examples
+package examples
 
 import agent.AchieveEvent
 import agent.Agent
-import agent.BasicMapEnvironment
-import agent.EnvironmentContext
 import agent.Plan
-import agent.agent
+import agent
+import environment.BasicMapEnvironment
+import environment.EnvironmentContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlin.coroutines.coroutineContext
 
-import kotlin.random.Random
-
-private val agent = Agent(
+private val myAgent = Agent(
     "TestAgent",
     listOf(
         Plan("start") {
-            val agent = coroutineContext.agent
             agent.say("Starting...")
             agent.alsoAchieve("task1")
             agent.alsoAchieve("task2")
@@ -31,13 +28,11 @@ private val agent = Agent(
 
         },
         Plan("task1") {
-            val agent = coroutineContext.agent
             agent.say("Executing task 1...")
             delay(1000)
             agent.say("Task 1 completed!")
         },
         Plan("task2") {
-            val agent = coroutineContext.agent
             agent.say("Executing task 2...")
             delay(1000)
             agent.say("Task 2 completed!")
@@ -52,7 +47,7 @@ private val agent = Agent(
 
 suspend fun main() = supervisorScope {
 
-    val agents = listOf(agent)
+    val agents = listOf(myAgent)
     val env = BasicMapEnvironment(agents)
 
     val masContext = coroutineContext + EnvironmentContext(env)
