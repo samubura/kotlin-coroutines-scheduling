@@ -5,11 +5,10 @@ import agent.Agent
 import agent.Plan
 import agent
 import args
-import environment.BasicMapEnvironment
 import environment.EnvironmentContext
+import examples.environment.BasicMapEnvironment
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import kotlin.coroutines.coroutineContext
 
 
 private val fibonacci = Agent(

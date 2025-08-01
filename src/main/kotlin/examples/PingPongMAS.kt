@@ -5,8 +5,8 @@ import agent.Agent
 import agent.Plan
 import agent
 import environment
-import environment.BasicMapEnvironment
 import environment.EnvironmentContext
+import examples.environment.BasicMapEnvironment
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope

@@ -1,24 +1,15 @@
-package environment
+package examples.environment
 
 import agent.Agent
 import agent.BeliefAddEvent
+import environment.Environment
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.coroutines.CoroutineContext
-
-interface Environment { }
-
-class EnvironmentContext(val environment: Environment) : CoroutineContext.Element {
-    override val key: CoroutineContext.Key<*> = Key
-    companion object Key : CoroutineContext.Key<EnvironmentContext>
-}
 
 
-class BasicMapEnvironment(private val agents : List<Agent>) : Environment {
+class BasicMapEnvironment(private val agents : List<Agent>) : Environment() {
 
     var data : MutableMap<String, Any> = mutableMapOf()
-    val mutex: Mutex = Mutex()
 
     suspend fun sendPerceptions(key : String, value : Any) {
         for (agent in agents) {
@@ -37,8 +28,7 @@ class BasicMapEnvironment(private val agents : List<Agent>) : Environment {
 
 }
 
-class BreakingEnvironment(private val agents : List<Agent>) : Environment {
-    val mutex: Mutex = Mutex()
+class BreakingEnvironment(private val agents : List<Agent>) : Environment() {
 
     suspend fun action() {
         mutex.withLock {

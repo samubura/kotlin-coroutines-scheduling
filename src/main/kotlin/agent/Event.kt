@@ -20,7 +20,7 @@ data class AchieveEvent<T>(
 ) : Event
 
 
-data class BeliefAddEvent<T : Any>(
+data class BeliefAddEvent<T : Any?>(
     val beliefName: String,
     val value: T
 ) : Event

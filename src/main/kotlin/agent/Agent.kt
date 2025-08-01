@@ -17,7 +17,7 @@ class Agent (
     val name: String,
     val plans: List<Plan<Any?>>,
     val initialGoals: List<AchieveEvent<Any?>> = listOf(),
-    val beliefs: MutableMap<String, Any> = mutableMapOf()
+    val beliefs: MutableMap<String, Any?> = mutableMapOf()
 ) {
     //TODO the channel is effective, but it does not allow for
     // setting priorities, or inspecting/canceling ongoing intentions
@@ -72,7 +72,7 @@ class Agent (
         }
     }
 
-    private fun addBelief(beliefName: String, value: Any) : Boolean {
+    private fun addBelief(beliefName: String, value: Any?) : Boolean {
         if(beliefs.contains(beliefName)){
             if(beliefs[beliefName] == value){
                 say("Belief $beliefName already exists with value $value, ignoring.")

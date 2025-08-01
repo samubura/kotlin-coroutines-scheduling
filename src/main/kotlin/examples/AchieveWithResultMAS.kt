@@ -4,12 +4,11 @@ import agent.AchieveEvent
 import agent.Agent
 import agent.Plan
 import agent
-import environment.BasicMapEnvironment
 import environment.EnvironmentContext
+import examples.environment.BasicMapEnvironment
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import kotlin.coroutines.coroutineContext
 import kotlin.random.Random
 
 

@@ -6,13 +6,11 @@ import agent.Plan
 import agent
 import args
 import environment
-import environment.BasicMapEnvironment
-import environment.BreakingEnvironment
 import environment.EnvironmentContext
+import examples.environment.BasicMapEnvironment
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import kotlin.coroutines.coroutineContext
 
 private val pinger = Agent(
     "Pinger",
