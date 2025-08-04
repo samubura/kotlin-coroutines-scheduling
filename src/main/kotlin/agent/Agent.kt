@@ -5,6 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -31,11 +32,13 @@ class Agent (
     val agentContext = IntentionInterceptor +
             AgentContext(this)
 
+    var stepNumber = 0L
+
     /**
      * Logs a message with the agent's name.
      */
     fun say(message: String){
-        log("$name: $message")
+        log("[Step: $stepNumber] $name: $message")
     }
 
     /**
@@ -94,18 +97,31 @@ class Agent (
         }
     }
 
+    suspend fun init() {
+        initialGoals.forEach{events.send(it)}
+    }
+
+
+    suspend fun step(scope: CoroutineScope) {
+        stepNumber++
+        val event = events.receive()
+        say("Handling event: $event")
+        scope.handleEvent(event)
+    }
+
     /**
      * Runs the agent in a supervisor scope,
      * allowing it to handle failures of child coroutines without affecting the parent coroutine.
      */
+    //TODO keeping this to avoid changing everything else, but the best way to run the agent is to
+    // use the init() and step() methods deciding externally how to schedule everything
     suspend fun run() = supervisorScope {
-        // Init the agent
-        initialGoals.forEach{events.send(it)}
+        //Initialize the agent
+        init()
 
         //Run the loop
         while(true){
-            val event = events.receive()
-            handleEvent(event)
+            step(this)
         }
     }
 
@@ -114,9 +130,9 @@ class Agent (
      */
     private fun CoroutineScope.handleEvent(event: Event) {
         when(event) {
-            is AchieveEvent<*> -> { handleAchieveEvent(event) }
+            is AchieveEvent<*> -> { handleAchieveEvent(event)}
             is BeliefAddEvent<*> -> { handleBeliefAddEvent(event) }
-            is StepEvent -> { step() }
+            is StepEvent -> { stepIntention() }
             else -> {
                 //TODO remove in final version
                 log("Unknown event type: $event")
@@ -167,8 +183,10 @@ class Agent (
     /**
      * Executes one step of the first available intention.
      */
-    private fun step() {
+    private fun stepIntention() {
         //TODO it should not run an intention that has been cancelled
+        //TODO why not "receive" and make it suspend??
+        // CAREFUL It should NEVER block... this should be called ONLY IF a coroutine is available to continue
         continuations.tryReceive().getOrNull()?.let{
             it()
         }
@@ -178,7 +196,7 @@ class Agent (
      * Launches a plan in a new coroutine within the agent context, the intention context, and its own plan context.
      */
     private fun CoroutineScope.launchPlan(plan: Plan<Any?>, intentionContext: IntentionContext, planContext: PlanContext<Any?>) {
-        this.launch(agentContext + intentionContext + planContext + intentionContext.job) {
+        launch(agentContext + intentionContext + planContext + intentionContext.job) {
             try{
                 val result = plan(this)
                 planContext.completion.complete(result) // Don't forget to complete the deferred once the plan is done!
