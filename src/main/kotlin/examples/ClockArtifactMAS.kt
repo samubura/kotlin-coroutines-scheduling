@@ -9,6 +9,7 @@ import agent.Agent
 import agent.Plan
 import agent
 import environment.EnvironmentContext
+import examples.environment.FakeFetchArtifact
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 
@@ -43,13 +44,16 @@ private val user = Agent(
         },
         Plan("+time"){
             agent.say("Current time: ${args[0]}")
+            if(args[0] == 10) {
+                agent.say("Time is 10, resetting clock...")
+                environment<ArtifactBasedEnvironment>().getArtifact<Clock>()?.reset()
+            }
         }
     ),
     listOf(
         AchieveEvent("start")
     )
 )
-
 
 suspend fun main() = supervisorScope {
 

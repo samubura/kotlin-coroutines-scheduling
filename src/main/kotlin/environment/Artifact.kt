@@ -5,11 +5,9 @@ import agent.Agent
 import agent.BeliefAddEvent
 import agent.Event
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import log
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
