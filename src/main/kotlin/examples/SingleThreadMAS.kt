@@ -4,6 +4,7 @@ import agent.AchieveEvent
 import agent.Agent
 import agent.Plan
 import agent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
@@ -14,7 +15,7 @@ val countPlans : List<Plan<Any?>> = listOf(
     Plan("count"){
         agent.say("Counting to 50...")
         for (i in 1..50) {
-            delay(1000)
+            delay(100)
             agent.say("Count: $i")
         }
         agent.say("Done counting!")
@@ -24,10 +25,11 @@ val countPlans : List<Plan<Any?>> = listOf(
 
 suspend fun main() = supervisorScope {
 
-    val agents = (1..1_000).map { Agent("counter$it", countPlans, listOf(AchieveEvent("count"))) }
+    val agents = (1..1_000_000).map { Agent("counter$it", countPlans, listOf(AchieveEvent("count"))) }
 
-    //val dispatcher = Dispatchers.Default.limitedParallelism(1)
-    val dispatcher = newSingleThreadContext("TEST")
+    val dispatcher = Dispatchers.Default.limitedParallelism(1)
+    //val dispatcher = newSingleThreadContext("TEST")
+    //val dispatcher = Dispatchers.Default
     val masContext = coroutineContext + dispatcher
 
     agents.forEach { agent ->
