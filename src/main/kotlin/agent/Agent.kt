@@ -105,7 +105,7 @@ class Agent (
     suspend fun step(scope: CoroutineScope) {
         stepNumber++
         val event = events.receive()
-        say("Handling event: $event")
+        //say("Handling event: $event")
         scope.handleEvent(event)
     }
 
