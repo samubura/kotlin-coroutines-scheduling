@@ -1,8 +1,6 @@
 package dsl
 
 import kotlinx.coroutines.CoroutineScope
-import query.Query
-import kotlin.coroutines.CoroutineContext
 
 /*
 
@@ -24,72 +22,142 @@ failing.retrieve(pluto) triggers { // NO
 }
 
  */
+//////////////////////////////////////////////////////////////////////
+// MODEL ENTITIES
+//////////////////////////////////////////////////////////////////////
+
+interface Agent<Belief : Any> {
+    val beliefs: Set<Belief>
+}
+
+interface Environment
 
 @JaktaDSL
-sealed interface PlanContext
-
-interface GuardContext : PlanContext
-
-interface FinalPlanContext : PlanContext, CoroutineScope {
-    val agent: Any
+interface PlanScope<Belief : Any> : CoroutineScope {
+    val agent: Agent<Belief>
+    val environment: Any //Env
 }
 
 @JaktaDSL
-sealed interface Trigger<QueryResult> {
-    sealed interface OnBelief<Belief : Any, QueryResult,> : Trigger<QueryResult> {
-        fun <Context: PlanContext, PlanResult> belief(belief: Query.Belief<Belief, QueryResult>): PlanConstructor<Context, PlanResult>
-    }
-    sealed interface OnGoal<QueryResult> : Trigger<QueryResult> {
-        fun <Context: PlanContext, PlanResult> goal(goal: Query.Goal<QueryResult>): PlanConstructor<Context, PlanResult>
-    }
-}
-sealed interface Addition<Belief : Any, QueryResult> : Trigger.OnBelief<Belief, QueryResult>, Trigger.OnGoal<QueryResult>
-sealed interface Removal<Belief : Any, QueryResult> : Trigger.OnBelief<Belief, QueryResult>, Trigger.OnGoal<QueryResult>
-sealed interface FailureInterception<QueryResult> : Trigger.OnGoal<QueryResult>
-
-@JaktaDSL
-interface Agent<Belief: Any, QueryResult> {
-    val adding: Addition<Belief, QueryResult> get() = TODO()
-    val removing: Removal<Belief, QueryResult> get() = TODO()
-    val failing: FailureInterception<QueryResult> get() = TODO()
+interface GuardScope<Belief : Any> {
+    val beliefs : Set<Belief>
 }
 
 
-
-@JaktaDSL
-interface PlanConstructor<Context: PlanContext, PlanResult> {
-    val context: Context
-}
-
-suspend infix fun <Context: FinalPlanContext, PlanResult> PlanConstructor<Context, PlanResult>.triggers(body: Context.() -> PlanResult): PlanResult = TODO()
-
-infix fun <InputContext: GuardContext, OutputContext: FinalPlanContext, PlanResult> PlanConstructor<InputContext, PlanResult>
-        .onlyIf(predicate: InputContext.() -> OutputContext): PlanConstructor<OutputContext, PlanResult> = TODO()
-
-@JaktaDSL
-fun <Belief, QueryResult> agent(
-    block: Agent<Belief, QueryResult>.() -> Unit
-): Agent<Belief, QueryResult> where Belief: Any = TODO()
-
-@JvmInline
-value class RegexQuery(val regex: Regex) : Query.Belief<Regex, MatchResult?> {
-    constructor(regex: String) : this(Regex(regex))
-}
-
-@JaktaDSL
-class RegexPlanContext(val matches: List<MatchResult>) : GuardContext
-class RegexPlanContextWithAgent(val matches: List<MatchResult>) : FinalPlanContext
+//////////////////////////////////////////////////////////////////////
+// DSL
+//////////////////////////////////////////////////////////////////////
 
 @DslMarker
 annotation class JaktaDSL
 
+@JaktaDSL
+sealed interface TriggerScope<Belief : Any, BeliefQueryResult : Any, GoalQueryResult : Any> {
+    sealed interface OnBelief<Belief : Any , BeliefQueryResult : Any, GoalQueryResult : Any>
+        : TriggerScope<Belief, BeliefQueryResult, GoalQueryResult> {
+
+        fun <PlanResult> belief(beliefQuery: Belief.() -> BeliefQueryResult?)
+        : PlanConstructor<Belief, BeliefQueryResult, PlanResult>
+    }
+    sealed interface OnGoal<Belief : Any, Goal : Any, BeliefQueryResult : Any, GoalQueryResult : Any>
+        : TriggerScope<Belief, BeliefQueryResult, GoalQueryResult> {
+
+        fun <PlanResult> goal(goalQuery: Goal.() -> GoalQueryResult?)
+        : PlanConstructor<Belief, GoalQueryResult, PlanResult>
+    }
+}
+
+sealed interface Addition<Belief : Any, Goal : Any, BeliefQueryResult : Any, GoalQueryResult : Any> :
+    TriggerScope.OnBelief<Belief, BeliefQueryResult, GoalQueryResult>,
+    TriggerScope.OnGoal<Belief, Goal, BeliefQueryResult, GoalQueryResult>
+
+sealed interface Removal<Belief : Any, Goal : Any, BeliefQueryResult : Any, GoalQueryResult : Any> :
+    TriggerScope.OnBelief<Belief, BeliefQueryResult, GoalQueryResult>,
+    TriggerScope.OnGoal<Belief, Goal, BeliefQueryResult, GoalQueryResult>
+
+sealed interface FailureInterception<Belief : Any, Goal : Any, BeliefQueryResult : Any, GoalQueryResult : Any> :
+    TriggerScope.OnGoal<Belief, Goal, BeliefQueryResult, GoalQueryResult>
+
+@JaktaDSL
+interface PlanLibraryConstructor<Belief : Any, Goal : Any, BeliefQueryResult : Any, GoalQueryResult : Any> {
+    val adding: Addition<Belief, Goal, BeliefQueryResult, GoalQueryResult> get() = TODO()
+    val removing: Removal<Belief, Goal, BeliefQueryResult, GoalQueryResult> get() = TODO()
+    val failing: FailureInterception<Belief, Goal, BeliefQueryResult, GoalQueryResult> get() = TODO()
+
+}
+
+@JaktaDSL
+interface AgentConstructor<Belief : Any, Goal : Any, BeliefQueryResult : Any, GoalQueryResult : Any> {
+
+    fun believes(
+        block: BeliefConstructor<Belief>.() -> Unit
+    ) : Unit = TODO()
+
+    fun hasInitialGoals(
+        block: GoalConstructor<Goal>.() -> Unit
+    ) : Unit = TODO()
+
+    fun hasPlans(
+        block: PlanLibraryConstructor<Belief, Goal, BeliefQueryResult, GoalQueryResult>.() -> Unit
+    ): Unit = TODO()
+}
+
+@JaktaDSL
+interface PlanConstructor<Belief : Any, Context, PlanResult> {
+    infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?): PlanConstructor<Belief, OutputContext, PlanResult> = TODO()
+    infix fun triggers(body: suspend PlanScope<Belief>.(Context) -> PlanResult): Unit = TODO()
+}
+
+@JaktaDSL
+interface BeliefConstructor<Belief : Any> {
+    operator fun Belief.unaryPlus() : Unit = TODO()
+}
+
+@JaktaDSL
+interface GoalConstructor<Belief : Any> {
+    operator fun Belief.not() : Unit = TODO()
+}
+
+
+// ENTRYPOINT
+@JaktaDSL
+fun <Belief : Any, Goal : Any, BeliefQueryResult : Any, GoalQueryResult : Any> agent(
+    block: AgentConstructor<Belief, Goal, BeliefQueryResult, GoalQueryResult>.() -> Unit
+): PlanLibraryConstructor<Belief, Goal, BeliefQueryResult, GoalQueryResult> = TODO()
+
+
+
+//////////////////////////////////////////////////////////////////////
+// DSL INCARNATION
+//////////////////////////////////////////////////////////////////////
+
+
+
 fun main() {
     agent {
-        adding.belief(RegexQuery("pluto")) onlyIf {
-            RegexPlanContextWithAgent(emptyList())
-        } triggers {
-            agent.toString()
-            matches.all { it.groups.isNotEmpty() }
+        believes {
+            + "pippo"
+            + "pluto"
         }
+        hasInitialGoals {
+            ! 27
+        }
+        hasPlans {
+            adding.belief{
+                Regex("pluto").matchEntire(this)
+            } onlyWhen {
+                listOfNotNull(it).takeIf { "pippo" in beliefs }
+            } triggers { ctx ->
+                agent.beliefs.contains("???")
+                ctx.all { it.groups.isNotEmpty() }
+            }
+            adding.goal {
+                takeIf { this > 27 }
+            } triggers { ctx ->
+                val x = ctx + 10
+            }
+        }
+        
     }
+    
 }
