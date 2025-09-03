@@ -1,6 +1,8 @@
 package dsl
 
+import kotlinx.coroutines.CoroutineScope
 import query.Query
+import kotlin.coroutines.CoroutineContext
 
 /*
 
@@ -28,7 +30,7 @@ sealed interface PlanContext
 
 interface GuardContext : PlanContext
 
-interface FinalPlanContext : PlanContext {
+interface FinalPlanContext : PlanContext, CoroutineScope {
     val agent: Any
 }
 
@@ -59,7 +61,7 @@ interface PlanConstructor<Context: PlanContext, PlanResult> {
     val context: Context
 }
 
-infix fun <Context: FinalPlanContext, PlanResult> PlanConstructor<Context, PlanResult>.triggers(body: Context.() -> PlanResult): PlanResult = TODO()
+suspend infix fun <Context: FinalPlanContext, PlanResult> PlanConstructor<Context, PlanResult>.triggers(body: Context.() -> PlanResult): PlanResult = TODO()
 
 infix fun <InputContext: GuardContext, OutputContext: FinalPlanContext, PlanResult> PlanConstructor<InputContext, PlanResult>
         .onlyIf(predicate: InputContext.() -> OutputContext): PlanConstructor<OutputContext, PlanResult> = TODO()
@@ -75,19 +77,18 @@ value class RegexQuery(val regex: Regex) : Query.Belief<Regex, MatchResult?> {
 }
 
 @JaktaDSL
-@JvmInline
-value class RegexPlanContext(val matches: List<MatchResult>) : GuardContext
-class RegexPlanContextWithAgent(val matches: List<MatchResult>, override val agent: Any) : FinalPlanContext
+class RegexPlanContext(val matches: List<MatchResult>) : GuardContext
+class RegexPlanContextWithAgent(val matches: List<MatchResult>) : FinalPlanContext
 
 @DslMarker
 annotation class JaktaDSL
 
 fun main() {
-    agent<Regex, MatchResult?> {
-        val isValid = adding.belief<RegexPlanContext, Boolean>(RegexQuery("pluto")) onlyIf {
+    agent {
+        adding.belief(RegexQuery("pluto")) onlyIf {
             RegexPlanContextWithAgent(emptyList())
         } triggers {
-
+            agent.toString()
             matches.all { it.groups.isNotEmpty() }
         }
     }
