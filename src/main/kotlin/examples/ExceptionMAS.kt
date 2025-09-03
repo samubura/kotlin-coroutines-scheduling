@@ -64,11 +64,11 @@ private val test = Agent(
         },
         //TODO this is a fake recovery plan for testing purposes
         // the agent is hardcoded to always use this recovery regardless of what failed
-        Plan("recover"){
+/*        Plan("recover"){
             agent.say("Recovering...")
             delay(1000)
             agent.say("Successfully recovered!")
-        }
+        }*/
     ),
     listOf(
         AchieveEvent("start"),

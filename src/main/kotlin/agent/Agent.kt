@@ -5,6 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.onSuccess
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -101,12 +102,15 @@ class Agent (
         initialGoals.forEach{events.send(it)}
     }
 
-
     suspend fun step(scope: CoroutineScope) {
         stepNumber++
         val event = events.receive()
         //say("Handling event: $event")
         scope.handleEvent(event)
+    }
+
+    fun tryStep(scope: CoroutineScope) = events.tryReceive().onSuccess {
+        scope.handleEvent(it)
     }
 
     /**
@@ -216,7 +220,6 @@ class Agent (
         val result = achieve<Unit>("recover")
         completion.complete(result)
     }
-
 }
 
 class AgentContext(val agent: Agent) : CoroutineContext.Element {
