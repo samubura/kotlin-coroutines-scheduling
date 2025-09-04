@@ -15,21 +15,22 @@ interface Environment
 
 interface Agent<Belief : Any, Goal: Any,  Env : Environment> {
     val beliefs: Set<Belief>
-    val beliefPlans: Sequence<Plan.Belief<Belief, Goal, Env, Any, Any, Any>> //TODO Should these be Any?
-    val goalPlans : Sequence<Plan.Goal<Belief, Goal, Env, Any, Any, Any>> // TODO Should these be Any?
+    val plans: Sequence<Plan<Belief, Goal, Env, Any, Any, Any, Any>>  // TODO FIX GENERICS
     fun <PlanResult> achieve(goal: Goal) : PlanResult
 }
 
+//TODO THIS IS THE SOURCE OF ALL ISSUES
+// Should we build and keep two parallel collections of plans? One for beliefs and one for goals?
 sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity : Any, TriggerResult : Any, Context: Any, PlanResult> {
     val trigger: Query<TriggerEntity, TriggerResult>
     val guard : Guard<Belief, TriggerResult, Context>?
     val body : PlanBody<Belief, Goal, Env, Context, PlanResult>
-
-    interface Belief<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
-        : Plan<Belief, Goal, Env, Belief, TriggerResult, Context, PlanResult>
-
-    interface Goal<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
-        : Plan<Belief, Goal, Env, Goal, TriggerResult, Context, PlanResult>
+//
+//    interface Belief<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
+//        : Plan<Belief, Goal, Env, Belief, TriggerResult, Context, PlanResult>
+//
+//    interface Goal<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
+//        : Plan<Belief, Goal, Env, Goal, TriggerResult, Context, PlanResult>
 
 }
 
@@ -95,53 +96,50 @@ interface MasBuilder<Belief : Any, Goal : Any, Env : Environment, BeliefQueryRes
     @JaktaDSL
     fun agent(
         block: AgentBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
-    ): Agent<Belief, Goal, Env> = TODO()
+    ): Agent<Belief, Goal, Env>
 
-    fun environment (block: () -> Env) : Unit
+    fun environment (block: () -> Env)
 }
-
-//@JaktaDSL
-//interface EnvironmentBuilder {
-//
-//}
 
 @JaktaDSL
 interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any> {
 
     fun believes(
         block: BeliefBuilder<Belief>.() -> Unit
-    ) : Unit = TODO()
+    ) : Set<Belief>
 
     fun hasInitialGoals(
         block: GoalBuilder<Goal>.() -> Unit
-    ) : Unit = TODO()
+    ) : Sequence<Goal>
 
     fun hasPlans(
         block: PlanLibraryBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
-    ): Unit = TODO()
+    ): Sequence<Plan<Belief, Goal, Env, Any, Any, Any, Any>>  // TODO FIX GENERICS
 }
 
 @JaktaDSL
 interface BeliefBuilder<Belief : Any> {
-    operator fun Belief.unaryPlus() : Unit = TODO()
+    operator fun Belief.unaryPlus()
 }
 
 @JaktaDSL
-interface GoalBuilder<Belief : Any> {
-    operator fun Belief.not() : Unit = TODO()
+interface GoalBuilder<Goal : Any> {
+    operator fun Goal.not()
 }
 
 @JaktaDSL
 interface PlanLibraryBuilder<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any> {
-    val adding: Addition<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> get() = TODO()
-    val removing: Removal<Belief, Goal, Env,  BeliefQueryResult, GoalQueryResult> get() = TODO()
-    val failing: FailureInterception<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> get() = TODO()
+    val adding: Addition<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>
+    val removing: Removal<Belief, Goal, Env,  BeliefQueryResult, GoalQueryResult>
+    val failing: FailureInterception<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>
 }
 
 @JaktaDSL
 interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context : Any, PlanResult> {
-    infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?): PlanBuilder<Belief, Goal, Env, OutputContext, PlanResult> = TODO()
-    infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult): Unit = TODO()
+    infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?) :
+            PlanBuilder<Belief, Goal, Env, OutputContext, PlanResult>
+    infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult) :
+            Plan<Belief, Goal, Env, Any, Any, Context, PlanResult>  //TODO FIX GENERICS
 }
 
 
@@ -151,6 +149,8 @@ fun <Belief : Any, Goal : Any,  Env: Environment, BeliefQueryResult : Any, GoalQ
     block: MasBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
 ): MAS<Belief, Goal, Env> = TODO()
 
+//TODO I want more entrypoints, to be able to define stuff in multiple files..
+// this should be easy, we can do it later
 
 
 //////////////////////////////////////////////////////////////////////
