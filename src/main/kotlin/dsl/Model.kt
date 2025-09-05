@@ -13,24 +13,14 @@ interface Environment
 
 interface Agent<Belief : Any, Goal: Any,  Env : Environment> {
     val beliefs: Collection<Belief>
-    //TODO FIX GENERICS:
-    // the first is (Goal | Belief) but the other ones?
-    // I think it is ok if they are Any as we won't have restrictions and each plan can have:
-    // - custom trigger result (?)
-    // - custom guard result i.e. context, which can also be simply TriggerResult when there is no guard so basically Context = (TriggerResult | Context)
-    // - custom plan result (which we store as a KType to find plans with reflection)
 
-    val plans: List<Plan<Belief, Goal, Env, Any, Any, Any, Any>>
+    val plans: List<Plan<Belief, Goal, Env, Any, Any, Any>>
     suspend fun <PlanResult> achieve(goal: Goal) : PlanResult
 }
 
-//TODO THIS IS THE SOURCE OF ALL ISSUES
-// Should we build and keep two parallel collections of plans? One for beliefs and one for goals?
-// Note that this will only solve the issue of the "TriggerEntity" generic
-// Which I have already fixed with a split PlanBuilder
-sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity : Any, TriggerResult : Any, Context: Any, PlanResult> {
-    val trigger: (TriggerEntity) -> TriggerResult?
-    val guard : ((Collection<Belief>, TriggerResult) -> Context?)?
+sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity : Any, Context: Any, PlanResult> {
+    val trigger: (TriggerEntity) -> Context?
+    val guard : ((Collection<Belief>, Context) -> Context?)?
     val body :  suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult
     val resultType : KType
 
@@ -49,16 +39,33 @@ sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity
         when (val trig = trigger(e)) {
             null -> null
             else -> when (val g = guard) {
-                null -> trig as Context? //TODO check ma mi sembra giusto questo cast non dovrebbe mai saltare
+                null -> trig
                 else -> g(beliefs, trig)
             }
         }
 
-    interface Belief<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
-        : Plan<Belief, Goal, Env, Belief, TriggerResult, Context, PlanResult>
+    sealed interface Addition<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity: Any, Context: Any, PlanResult>
+        : Plan<Belief, Goal, Env, TriggerEntity, Context, PlanResult> {
 
-    interface Goal<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
-        : Plan<Belief, Goal, Env, Goal, TriggerResult, Context, PlanResult>
+        interface Belief<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+            : Addition<Belief, Goal, Env, Belief,  Context, PlanResult>
+
+        interface Goal <Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+            : Addition<Belief, Goal, Env, Goal,  Context, PlanResult>
+    }
+
+    sealed interface Removal<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity: Any, Context: Any, PlanResult>
+        : Plan<Belief, Goal, Env, TriggerEntity,  Context, PlanResult> {
+
+        interface Belief<Belief : Any, Goal: Any,  Env : Environment,  Context: Any, PlanResult>
+            : Addition<Belief, Goal, Env, Belief,  Context, PlanResult>
+
+        interface Goal <Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+            : Addition<Belief, Goal, Env, Goal, Context, PlanResult>
+    }
+
+    interface GoalFailure<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+        : Plan<Belief, Goal, Env, Goal, Context, PlanResult>
 }
 
 @JaktaDSL
@@ -89,7 +96,7 @@ data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
 
 data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     override val beliefs: Collection<Belief>,
-    override val plans: List<Plan<Belief, Goal, Env, Any, Any, Any, Any>>
+    override val plans: List<Plan<Belief, Goal, Env, Any, Any, Any>>
 ) : Agent<Belief, Goal, Env> {
 
     override suspend fun <PlanResult> achieve(goal: Goal): PlanResult {
@@ -97,19 +104,19 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     }
 }
 
-data class BeliefPlanImpl<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>(
-    override val trigger: (Belief) -> TriggerResult?,
-    override val guard: ((Collection<Belief>, TriggerResult) -> Context?)?,
-    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-    override val resultType: KType
-) : Plan.Belief<Belief, Goal, Env, TriggerResult, Context, PlanResult>
-
-data class GoalPlanImpl<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>(
-    override val trigger: (Goal) -> TriggerResult?,
-    override val guard: ((Collection<Belief>, TriggerResult) -> Context?)?,
-    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-    override val resultType: KType
-) : Plan.Goal<Belief, Goal, Env, TriggerResult, Context, PlanResult>
+//data class BeliefPlanImpl<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>(
+//    override val trigger: (Belief) -> TriggerResult?,
+//    override val guard: ((Collection<Belief>, TriggerResult) -> Context?)?,
+//    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
+//    override val resultType: KType
+//) : Plan.Belief<Belief, Goal, Env, TriggerResult, Context, PlanResult>
+//
+//data class GoalPlanImpl<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>(
+//    override val trigger: (Goal) -> TriggerResult?,
+//    override val guard: ((Collection<Belief>, TriggerResult) -> Context?)?,
+//    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
+//    override val resultType: KType
+//) : Plan.Goal<Belief, Goal, Env, TriggerResult, Context, PlanResult>
 
 @JaktaDSL
 data class PlanScopeImpl<Belief : Any, Goal : Any, Env : Environment, Context : Any>(

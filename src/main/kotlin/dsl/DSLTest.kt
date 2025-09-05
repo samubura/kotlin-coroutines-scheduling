@@ -5,6 +5,10 @@ class TestEnvironment : Environment {
     fun test(): Unit {}
 }
 
+class TestContext() {
+    fun test() : Unit {}
+}
+
 
 fun main() {
     mas {
@@ -25,12 +29,15 @@ fun main() {
             hasPlans {
 
                 adding.belief {
-                    Regex("pluto").matchEntire(this)
+                    listOf(TestContext())
                 } onlyWhen {
-                    listOfNotNull(it).takeIf { "pippo" in beliefs }
+                    listOf(TestContext())
                 } triggers {
                     agent.beliefs.contains("???")
-                    context.all { it.groups.isNotEmpty() }
+                    //TODO Compiler exploding if I remove the next line
+                    // Wtf??
+                    val x: List<TestContext> = context
+                    context.firstOrNull()
                 }
 
                 adding.goal {

@@ -41,7 +41,7 @@ private class AgentBuilderImpl<
 
     private val beliefsList = mutableListOf<Belief>()
     private val initialGoals = mutableListOf<Goal>()
-    private val planList = mutableListOf<Plan<Belief, Goal, Env, Any, Any, Any, Any>>()
+    private val planList = mutableListOf<Plan<Belief, Goal, Env, Any, Any, Any>>()
 
     // Will be set once agent is created, enabling late-binding from plans
     private lateinit var agentRef: AgentImpl<Belief, Goal, Env>
@@ -60,8 +60,8 @@ private class AgentBuilderImpl<
 
     override fun hasPlans(
         block: PlanLibraryBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
-    ): Sequence<Plan<Belief, Goal, Env, Any, Any, Any, Any>> {
-        val plb = PlanLibraryBuilderImpl<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>()
+    ): Sequence<Plan<Belief, Goal, Env, Any, Any, Any>> {
+        val plb = TODO()
         plb.apply(block)
         // planList += plb.builtPlans TODO
         return planList.asSequence()
@@ -91,52 +91,9 @@ private class GoalBuilderImpl<Goal : Any>(
     }
 }
 
-private class PlanLibraryBuilderImpl<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any> :
-    PlanLibraryBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> {
-    override val adding: Addition<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> = TriggerImpl.Addition(::addPlan)
-    override val removing: Removal<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> = TriggerImpl.Removal(::addPlan)
-    override val failing: FailureInterception<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> = TriggerImpl.FailureInterception(::addPlan)
-
-    val builtPlans = mutableListOf<Plan<Belief, Goal, Env, Any, Any, Any, Any>>()
-
-    private fun addPlan(plan: Plan<Belief, Goal, Env, Any, Any, Any, Any>) {
-        builtPlans += plan
-    }
-}
-
-private abstract class TriggerImpl<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any>(
-    val addPlanFunction: (plan: Plan<Belief, Goal, Env, Any, Any, Any, Any>) -> Unit
-) :
-    Addition<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>,
-    Removal<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>,
-    FailureInterception<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>{
-    override fun <PlanResult> belief(beliefQuery: Belief.() -> BeliefQueryResult?): PlanBuilder.Belief<Belief, Goal, Env, BeliefQueryResult, PlanResult> {
-        TODO()
-    }
-
-    override fun <PlanResult> goal(goalQuery: Goal.() -> GoalQueryResult?): PlanBuilder.Goal<Belief, Goal, Env, GoalQueryResult, PlanResult> {
-        TODO()
-    }
-
-    class Addition<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any>(
-        addPlanFunction: (plan: Plan<Belief, Goal, Env, Any, Any, Any, Any>) -> Unit
-    ) : TriggerImpl<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>(addPlanFunction)
-
-    class Removal<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any>(
-        addPlanFunction: (plan: Plan<Belief, Goal, Env, Any, Any, Any, Any>) -> Unit
-    ) : TriggerImpl<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>(addPlanFunction)
-
-    class FailureInterception<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any>(
-        addPlanFunction: (plan: Plan<Belief, Goal, Env, Any, Any, Any, Any>) -> Unit
-    ) : TriggerImpl<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>(addPlanFunction)
-}
-
 
 private abstract class PlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Context : Any, PlanResult>() :
     PlanBuilder<Belief, Goal, Env, Context, PlanResult>
-
-
-
 
 
 
@@ -148,9 +105,10 @@ private abstract class PlanBuilderImpl<Belief : Any, Goal: Any, Env : Environmen
 fun <Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any> mas(
     block: MasBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
 ): MAS<Belief, Goal, Env> {
-    val mb = MasBuilderImpl<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>()
-    mb.apply(block)
-    return mb.build()
+//    val mb = MasBuilderImpl<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>()
+//    mb.apply(block)
+//    return mb.build()
+    return TODO()
 }
 
 //TODO I want more entrypoints, to be able to define stuff in multiple files..
