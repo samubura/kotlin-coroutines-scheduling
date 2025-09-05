@@ -1,5 +1,9 @@
 package dsl
 
+import kotlinx.coroutines.Deferred
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
+
 //////////////////////////////////////////////////////////////////////
 // MODEL ENTITIES
 //////////////////////////////////////////////////////////////////////
@@ -14,44 +18,63 @@ interface MAS<Belief : Any, Goal : Any, Env : Environment >{
 interface Environment
 
 interface Agent<Belief : Any, Goal: Any,  Env : Environment> {
-    val beliefs: Set<Belief>
-    val plans: Sequence<Plan<Belief, Goal, Env, Any, Any, Any, Any>>  // TODO FIX GENERICS
-    fun <PlanResult> achieve(goal: Goal) : PlanResult
+    val beliefs: Collection<Belief>
+    //TODO FIX GENERICS:
+    // the first is (Goal | Belief) but the other ones?
+    // I think it is ok if they are Any as we won't have restrictions and each plan can have:
+    // - custom trigger result (?)
+    // - custom guard result i.e. context, which can also be simply TriggerResult when there is no guard so basically Context = (TriggerResult | Context)
+    // - custom plan result (which we store as a KType to find plans with reflection)
+
+    val plans: List<Plan<Belief, Goal, Env, Any, Any, Any, Any>>
+    suspend fun <PlanResult> achieve(goal: Goal) : PlanResult
 }
 
 //TODO THIS IS THE SOURCE OF ALL ISSUES
 // Should we build and keep two parallel collections of plans? One for beliefs and one for goals?
+// Note that this will only solve the issue of the "TriggerEntity" generic
+// Which I have already fixed with a split PlanBuilder
 sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity : Any, TriggerResult : Any, Context: Any, PlanResult> {
-    val trigger: Query<TriggerEntity, TriggerResult>
-    val guard : Guard<Belief, TriggerResult, Context>?
-    val body : PlanBody<Belief, Goal, Env, Context, PlanResult>
-//
-//    interface Belief<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
-//        : Plan<Belief, Goal, Env, Belief, TriggerResult, Context, PlanResult>
-//
-//    interface Goal<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
-//        : Plan<Belief, Goal, Env, Goal, TriggerResult, Context, PlanResult>
+    val trigger: (TriggerEntity) -> TriggerResult?
+    val guard : ((Collection<Belief>, TriggerResult) -> Context?)?
+    val body :  suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult
+    val resultType : KType
 
+    fun isRelevant(e: TriggerEntity, desiredResult: KType) : Boolean = resultType == desiredResult && this.trigger(e) != null
+
+    fun isApplicable(beliefs: Collection<Belief>, e : TriggerEntity, desiredResult: KType) : Boolean = resultType == desiredResult &&
+        when (val trig = trigger(e)) {
+            null -> false
+            else -> when (val g = guard) {
+                null -> true
+                else -> g(beliefs, trig) != null
+            }
+        }
+
+    fun getPlanScope(beliefs: Collection<Belief>, e : TriggerEntity) : PlanScope<Belief, Goal, Env, Context>
+
+
+    interface Belief<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
+        : Plan<Belief, Goal, Env, Belief, TriggerResult, Context, PlanResult>
+
+    interface Goal<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>
+        : Plan<Belief, Goal, Env, Goal, TriggerResult, Context, PlanResult>
 }
 
-fun interface Query<Entity : Any, Result: Any> : (Entity) -> Result?
 
-fun interface Guard<Belief: Any, InputContext : Any, OutputContext : Any> : (Belief, InputContext) -> OutputContext?
-
-fun interface PlanBody<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> : suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult
 
 /// HYBRID MODEL/DSL ENTITIES
 
 @JaktaDSL
 interface PlanScope<Belief : Any, Goal: Any, Env : Environment, Context : Any> {
-    val agent: Agent<Belief, Goal, Env>
+    val agent: Agent<Belief, Goal, Env> //TODO probably a different interface with only the "legal" side effects
     val environment: Env
     val context : Context
 }
 
 @JaktaDSL
 interface GuardScope<Belief : Any> {
-    val beliefs : Set<Belief>
+    val beliefs : Collection<Belief>
 }
 
 
@@ -68,13 +91,13 @@ sealed interface TriggerBuilder<Belief : Any, Goal : Any, Env : Environment, Bel
         : TriggerBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> {
 
         fun <PlanResult> belief(beliefQuery: Belief.() -> BeliefQueryResult?)
-        : PlanBuilder<Belief, Goal, Env, BeliefQueryResult, PlanResult>
+        : PlanBuilder.Belief<Belief, Goal, Env, BeliefQueryResult, PlanResult>
     }
     sealed interface OnGoal<Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any>
         : TriggerBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> {
 
         fun <PlanResult> goal(goalQuery: Goal.() -> GoalQueryResult?)
-        : PlanBuilder<Belief, Goal, Env, GoalQueryResult, PlanResult>
+        : PlanBuilder.Goal<Belief, Goal, Env, GoalQueryResult, PlanResult>
     }
 }
 
@@ -106,7 +129,7 @@ interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment, BeliefQueryRe
 
     fun believes(
         block: BeliefBuilder<Belief>.() -> Unit
-    ) : Set<Belief>
+    ) : Collection<Belief>
 
     fun hasInitialGoals(
         block: GoalBuilder<Goal>.() -> Unit
@@ -134,13 +157,48 @@ interface PlanLibraryBuilder<Belief : Any, Goal : Any, Env: Environment, BeliefQ
     val failing: FailureInterception<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>
 }
 
+//TODO I'm not sure all this extra stuff is needed, it seems too much
 @JaktaDSL
-interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context : Any, PlanResult> {
-    infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?) :
-            PlanBuilder<Belief, Goal, Env, OutputContext, PlanResult>
-    infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult) :
-            Plan<Belief, Goal, Env, Any, Any, Context, PlanResult>  //TODO FIX GENERICS
+sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context : Any, PlanResult> {
+
+    interface Belief<Belief : Any, Goal: Any, Env : Environment, Context : Any, PlanResult> : PlanBuilder<Belief, Goal, Env, Context, PlanResult> {
+        infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?) :
+                GuardedPlanBuilder.Belief<Belief, Goal, Env, Context, OutputContext, PlanResult>
+
+        infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult) :
+            Plan.Belief<Belief, Goal, Env, Context, Context, PlanResult>
+    }
+
+    interface Goal<Belief : Any, Goal: Any, Env : Environment, Context : Any, PlanResult> : PlanBuilder<Belief, Goal, Env, Context, PlanResult> {
+        infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?) :
+                GuardedPlanBuilder.Goal<Belief, Goal, Env, Context, OutputContext, PlanResult>
+
+        infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult) :
+            Plan.Goal<Belief, Goal, Env, Any, Context, PlanResult>
+    }
 }
+
+// TODO This is definitely duplicating some logic but now I have fully bounded types
+sealed interface GuardedPlanBuilder<Belief : Any, Goal: Any, Env : Environment, TriggerContext : Any, OutputContext : Any, PlanResult> {
+
+    interface Belief<Belief : Any, Goal: Any, Env : Environment, TriggerContext : Any, OutputContext : Any, PlanResult> :
+        GuardedPlanBuilder<Belief, Goal, Env, TriggerContext, OutputContext, PlanResult> {
+
+        infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, OutputContext>.() -> PlanResult) :
+                Plan.Belief<Belief, Goal, Env, TriggerContext, OutputContext, PlanResult>
+    }
+
+    interface Goal<Belief : Any, Goal: Any, Env : Environment, TriggerContext : Any, OutputContext : Any, PlanResult> :
+        GuardedPlanBuilder<Belief, Goal, Env, TriggerContext, OutputContext, PlanResult> {
+
+        infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, OutputContext>.() -> PlanResult) :
+                Plan.Goal<Belief, Goal, Env, TriggerContext, OutputContext, PlanResult>
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// DSL IMPL
+//////////////////////////////////////////////////////////////////////
 
 
 // ENTRYPOINT
