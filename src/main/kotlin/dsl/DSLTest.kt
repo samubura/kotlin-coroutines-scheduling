@@ -29,15 +29,12 @@ fun main() {
             hasPlans {
 
                 adding.belief {
-                    listOf(TestContext())
+                    sequenceOf("a")
                 } onlyWhen {
-                    listOf(TestContext())
+                    listOf("b")
                 } triggers {
-                    agent.beliefs.contains("???")
-                    //TODO Compiler exploding if I remove the next line
-                    // Wtf??
-                    val x: List<TestContext> = context
                     context.firstOrNull()
+                    true
                 }
 
                 adding.goal {

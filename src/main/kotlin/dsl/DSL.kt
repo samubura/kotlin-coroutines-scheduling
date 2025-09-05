@@ -62,7 +62,7 @@ interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment, BeliefQueryRe
 
     fun hasPlans(
         block: PlanLibraryBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
-    ): Sequence<Plan<Belief, Goal, Env, *, *, *>>  // TODO FIX GENERICS
+    ): Sequence<Plan<Belief, Goal, Env, Any, Any, Any>>  // TODO FIX GENERICS
 }
 
 @JaktaDSL
@@ -90,8 +90,8 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
 
         interface Belief<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> :
             Addition<Belief, Goal, Env, Context, PlanResult> {
-            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
-                    PlanBuilder.Addition.Belief<Belief, Goal, Env, Context, PlanResult>
+            infix fun <OutputContext : Context> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?): //TODO Weird behavior
+                    PlanBuilder.Addition.Belief<Belief, Goal, Env, OutputContext, PlanResult>
 
             infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
                     Plan.Addition.Belief<Belief, Goal, Env, Context, PlanResult>

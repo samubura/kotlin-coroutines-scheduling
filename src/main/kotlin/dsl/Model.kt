@@ -104,20 +104,6 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     }
 }
 
-//data class BeliefPlanImpl<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>(
-//    override val trigger: (Belief) -> TriggerResult?,
-//    override val guard: ((Collection<Belief>, TriggerResult) -> Context?)?,
-//    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-//    override val resultType: KType
-//) : Plan.Belief<Belief, Goal, Env, TriggerResult, Context, PlanResult>
-//
-//data class GoalPlanImpl<Belief : Any, Goal: Any,  Env : Environment, TriggerResult : Any, Context: Any, PlanResult>(
-//    override val trigger: (Goal) -> TriggerResult?,
-//    override val guard: ((Collection<Belief>, TriggerResult) -> Context?)?,
-//    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-//    override val resultType: KType
-//) : Plan.Goal<Belief, Goal, Env, TriggerResult, Context, PlanResult>
-
 @JaktaDSL
 data class PlanScopeImpl<Belief : Any, Goal : Any, Env : Environment, Context : Any>(
     override val agent: Agent<Belief, Goal, Env>,
