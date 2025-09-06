@@ -1,5 +1,6 @@
 package dsl
 
+import kotlinx.coroutines.runBlocking
 import kotlin.reflect.KType
 
 interface MAS<Belief : Any, Goal : Any, Env : Environment >{
@@ -106,12 +107,14 @@ data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
 ) : MAS<Belief, Goal, Env> {
 
     override fun run() {
-        TODO()
+        //TODO Implement the real one
+        agents.forEach{print(it)}
     }
 }
 
 data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     override val beliefs: Collection<Belief>,
+    val goals : List<Goal>,
     override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
     override val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>
 ) : Agent<Belief, Goal, Env> {

@@ -36,7 +36,7 @@ fun main() {
                     true
                 }
 
-                adding.goal {
+                failing.goal {
                     takeIf{it >= 27}
                 } triggers {
                     val x = context + 10

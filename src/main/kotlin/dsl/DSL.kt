@@ -16,6 +16,8 @@ interface MasBuilder<Belief : Any, Goal : Any, Env : Environment> {
     ): Agent<Belief, Goal, Env>
 
     fun environment (block: () -> Env)
+
+    fun build() : MAS<Belief, Goal, Env>
 }
 
 @JaktaDSL
@@ -32,6 +34,8 @@ interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment> {
     fun hasPlans(
         block: PlanLibraryBuilder<Belief, Goal, Env>.() -> Unit
     )
+
+    fun build(): Agent<Belief, Goal, Env>
 }
 
 @JaktaDSL
@@ -115,7 +119,7 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
                     PlanBuilder.Removal.Belief<Belief, Goal, Env, Context>
 
             infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult>
+                    Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult>
         }
 
         interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
@@ -124,7 +128,7 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
                     PlanBuilder.Removal.Goal<Belief, Goal, Env, Context>
 
             infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult>
+                    Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult>
         }
     }
 
