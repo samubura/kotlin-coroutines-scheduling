@@ -1,77 +1,59 @@
 package dsl
 
+import kotlin.reflect.typeOf
+
 // ---------- Builders (DSL) ----------
 
-private class MasBuilderImpl<Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any> :
-    MasBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> {
+private class MasBuilderImpl<Belief : Any, Goal : Any, Env : Environment> :
+    MasBuilder<Belief, Goal, Env> {
 
-    private var envFactory: (() -> Env)? = null
-    private val builtAgents = mutableListOf<Agent<Belief, Goal, Env>>()
+    private var environment: Env? = null
+    private val agents = mutableListOf<Agent<Belief, Goal, Env>>()
 
     override fun agent(
-        block: AgentBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
+        block: AgentBuilder<Belief, Goal, Env>.() -> Unit
     ): Agent<Belief, Goal, Env> {
-        val agentBuilder = AgentBuilderImpl<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>(
-            environmentProvider = { envFactory?.invoke() ?: error("Environment not defined yet") }
-        )
+        val agentBuilder = AgentBuilderImpl<Belief, Goal, Env>()
         val agent = agentBuilder.apply(block).build()
-        builtAgents += agent
+        agents += agent
         return agent
     }
 
     override fun environment(block: () -> Env) {
-        envFactory = block
+        environment = block()
     }
 
     fun build(): MAS<Belief, Goal, Env> {
-        val env = envFactory?.invoke() ?: error("Environment must be provided")
-        return MASImpl(env, builtAgents.toSet())
+        val env = environment ?: throw IllegalStateException("Must provide an Environment for the MAS")
+        return MASImpl(env, agents.toSet())
     }
 }
 
-private class AgentBuilderImpl<
-        Belief : Any,
-        Goal : Any,
-        Env : Environment,
-        BeliefQueryResult : Any,
-        GoalQueryResult : Any
-        >(
-    private val environmentProvider: () -> Env
-) : AgentBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult> {
+private class AgentBuilderImpl<Belief : Any, Goal : Any, Env : Environment>() : AgentBuilder<Belief, Goal, Env> {
 
-    private val beliefsList = mutableListOf<Belief>()
+    private val initialBeliefs = mutableListOf<Belief>()
     private val initialGoals = mutableListOf<Goal>()
-    private val planList = mutableListOf<Plan<Belief, Goal, Env, Any, Any, Any>>()
+    private val beliefPlans = mutableListOf<Plan.Belief<Belief, Goal, Env, *, *>>()
+    private val goalPlans = mutableListOf<Plan.Goal<Belief, Goal, Env, *, *>>()
 
-    // Will be set once agent is created, enabling late-binding from plans
-    private lateinit var agentRef: AgentImpl<Belief, Goal, Env>
-
-    override fun believes(block: BeliefBuilder<Belief>.() -> Unit): Collection<Belief> {
-        val bb = BeliefBuilderImpl(beliefsList)
-        bb.apply(block)
-        return beliefsList
+    override fun believes(block: BeliefBuilder<Belief>.() -> Unit) {
+        val builder = BeliefBuilderImpl(initialBeliefs)
+        builder.apply(block)
     }
 
-    override fun hasInitialGoals(block: GoalBuilder<Goal>.() -> Unit): Sequence<Goal> {
-        val gb = GoalBuilderImpl(initialGoals)
-        gb.apply(block)
-        return initialGoals.asSequence()
+    override fun hasInitialGoals(block: GoalBuilder<Goal>.() -> Unit) {
+        val builder = GoalBuilderImpl(initialGoals)
+        builder.apply(block)
     }
 
-    override fun hasPlans(
-        block: PlanLibraryBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
-    ): Sequence<Plan<Belief, Goal, Env, Any, Any, Any>> {
-        val plb = TODO()
-        plb.apply(block)
-        // planList += plb.builtPlans TODO
-        return planList.asSequence()
+    override fun hasPlans(block: PlanLibraryBuilder<Belief, Goal, Env>.() -> Unit) {
+        val builder = PlanLibraryBuilderImpl(beliefPlans, goalPlans)
+        block(builder)
     }
 
     fun build(): Agent<Belief, Goal, Env> {
-        val env = environmentProvider()
-        val agent = AgentImpl(beliefsList.toList(), planList.toList())
-        agentRef = agent
-        return agent
+        //TODO maybe some consistency checks
+        return AgentImpl(initialBeliefs, beliefPlans, goalPlans)
     }
 }
 
@@ -91,10 +73,82 @@ private class GoalBuilderImpl<Goal : Any>(
     }
 }
 
+private class PlanLibraryBuilderImpl<Belief: Any, Goal: Any, Env: Environment>(
+    val beliefPlans: MutableCollection<Plan.Belief<Belief, Goal, Env, *, *>>,
+    val goalPlans: MutableCollection<Plan.Goal<Belief, Goal, Env, *, *>>
+) : PlanLibraryBuilder<Belief, Goal, Env> {
+    override val adding: TriggerBuilder.Addition<Belief, Goal, Env> =  TriggerAdditionImpl(beliefPlans, goalPlans)
+    override val removing: TriggerBuilder.Removal<Belief, Goal, Env> =  TriggerRemovalImpl(beliefPlans, goalPlans)
+    override val failing: TriggerBuilder.FailureInterception<Belief, Goal, Env> = TriggerFailureInterceptionImpl(goalPlans)
+}
 
-private abstract class PlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Context : Any, PlanResult>() :
-    PlanBuilder<Belief, Goal, Env, Context, PlanResult>
 
+private class TriggerAdditionImpl<Belief: Any, Goal: Any, Env: Environment>(
+    val beliefPlans: MutableCollection<Plan.Belief<Belief, Goal, Env, *, *>>,
+    val goalPlans: MutableCollection<Plan.Goal<Belief, Goal, Env, *, *>>
+) : TriggerBuilder.Addition<Belief, Goal, Env> {
+    override fun <Context : Any> belief(beliefQuery: Belief.() -> Context?): PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> {
+        val builder = BeliefAdditionPlanBuilderImpl<Belief, Goal, Env, Context>(beliefQuery)
+        val plan = builder.build()
+        beliefPlans += plan
+    }
+
+    override fun <Context : Any> goal(goalQuery: Goal.() -> Context?): PlanBuilder.Addition.Goal<Belief, Goal, Env, Context> {
+        val plan = TODO()
+        goalPlans += plan
+    }
+}
+
+private class TriggerRemovalImpl<Belief: Any, Goal: Any, Env: Environment>(
+    val beliefPlans: MutableCollection<Plan.Belief<Belief, Goal, Env, *, *>>,
+    val goalPlans: MutableCollection<Plan.Goal<Belief, Goal, Env, *, *>>
+) : TriggerBuilder.Removal<Belief, Goal, Env> {
+    override fun <Context : Any> belief(beliefQuery: Belief.() -> Context?): PlanBuilder.Removal.Belief<Belief, Goal, Env, Context> {
+        val plan = TODO()
+        beliefPlans += plan
+    }
+
+    override fun <Context : Any> goal(goalQuery: Goal.() -> Context?): PlanBuilder.Removal.Goal<Belief, Goal, Env, Context> {
+        val plan = TODO()
+        goalPlans += plan
+    }
+}
+
+
+private class TriggerFailureInterceptionImpl<Belief: Any, Goal: Any, Env: Environment>(
+    val goalPlans: MutableCollection<Plan.Goal<Belief, Goal, Env, *, *>>
+) : TriggerBuilder.FailureInterception<Belief, Goal, Env> {
+    override fun <Context : Any> goal(goalQuery: Goal.() -> Context?): PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context> {
+        val plan = TODO()
+        goalPlans += plan
+    }
+}
+
+
+private class BeliefAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Context : Any>(
+    val trigger: Belief.() -> Context?,
+    var guard: GuardScope<Belief>.(Context) -> Context? = { x -> x}
+) : PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> {
+
+    var plan: Plan.Belief.Addition<Belief, Goal, Env, Context, *>? = null
+
+    override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
+            PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> {
+        this.guard = guard
+        return this
+    }
+
+    override fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
+            Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult> {
+        val plan = BeliefAdditionPlan(trigger, guard, body)
+        this.plan = plan
+        return plan //TODO this is strange
+    }
+
+    fun build() : Plan.Belief.Addition<Belief, Goal, Env, Context, *> {
+        return plan ?: throw IllegalStateException("Unable to create plan") //TODO check
+    }
+}
 
 
 //////////////////////////////////////////////////////////////////////

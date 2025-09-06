@@ -13,59 +13,61 @@ interface Environment
 
 interface Agent<Belief : Any, Goal: Any,  Env : Environment> {
     val beliefs: Collection<Belief>
-
-    val plans: List<Plan<Belief, Goal, Env, Any, Any, Any>>
+    val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>
+    val goalPlans : List<Plan.Goal<Belief, Goal, Env, *, *>>
     suspend fun <PlanResult> achieve(goal: Goal) : PlanResult
 }
 
 sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity : Any, Context: Any, PlanResult> {
     val trigger: (TriggerEntity) -> Context?
-    val guard : ((Collection<Belief>, Context) -> Context?)?
+    val guard : GuardScope<Belief>.(Context) -> Context?
     val body :  suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult
-    val resultType : KType
 
-    fun isRelevant(e: TriggerEntity, desiredResult: KType) : Boolean = resultType == desiredResult && this.trigger(e) != null
+    //TODO val resultType : KType
 
-    fun isApplicable(beliefs: Collection<Belief>, e : TriggerEntity, desiredResult: KType) : Boolean = resultType == desiredResult &&
+    fun isRelevant(e: TriggerEntity, desiredResult: KType) : Boolean =
+        //TODO resultType == desiredResult &&
+        this.trigger(e) != null
+
+    fun isApplicable(guardScope: GuardScope<Belief>, e : TriggerEntity, desiredResult: KType) : Boolean =
+        //TODO resultType == desiredResult &&
             when (val trig = trigger(e)) {
                 null -> false
                 else -> when (val g = guard) {
-                    null -> true
-                    else -> g(beliefs, trig) != null
+                    else -> g(guardScope, trig) != null
                 }
             }
 
-    fun getPlanContext(beliefs: Collection<Belief>, e: TriggerEntity) : Context? =
+    fun getPlanContext(guardScope: GuardScope<Belief>, e: TriggerEntity) : Context? =
         when (val trig = trigger(e)) {
             null -> null
             else -> when (val g = guard) {
-                null -> trig
-                else -> g(beliefs, trig)
+                else -> g(guardScope, trig)
             }
         }
 
-    sealed interface Addition<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity: Any, Context: Any, PlanResult>
-        : Plan<Belief, Goal, Env, TriggerEntity, Context, PlanResult> {
+    sealed interface Belief<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+        : Plan<Belief, Goal, Env, Belief,  Context, PlanResult> {
 
-        interface Belief<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
-            : Addition<Belief, Goal, Env, Belief,  Context, PlanResult>
+        interface Addition<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+        : Plan.Belief<Belief, Goal, Env, Context, PlanResult>
 
-        interface Goal <Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
-            : Addition<Belief, Goal, Env, Goal,  Context, PlanResult>
+        interface Removal<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+            : Plan.Belief<Belief, Goal, Env, Context, PlanResult>
     }
 
-    sealed interface Removal<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity: Any, Context: Any, PlanResult>
-        : Plan<Belief, Goal, Env, TriggerEntity,  Context, PlanResult> {
+    sealed interface Goal<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+        : Plan<Belief, Goal, Env, Goal,  Context, PlanResult> {
 
-        interface Belief<Belief : Any, Goal: Any,  Env : Environment,  Context: Any, PlanResult>
-            : Addition<Belief, Goal, Env, Belief,  Context, PlanResult>
+        interface Addition<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+            : Plan.Goal<Belief, Goal, Env, Context, PlanResult>
 
-        interface Goal <Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
-            : Addition<Belief, Goal, Env, Goal, Context, PlanResult>
+        interface Removal<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+            : Plan.Goal<Belief, Goal, Env, Context, PlanResult>
+
+        interface Failure<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
+            : Plan.Goal<Belief, Goal, Env, Context, PlanResult>
     }
-
-    interface GoalFailure<Belief : Any, Goal: Any,  Env : Environment, Context: Any, PlanResult>
-        : Plan<Belief, Goal, Env, Goal, Context, PlanResult>
 }
 
 @JaktaDSL
@@ -84,25 +86,6 @@ interface GuardScope<Belief : Any> {
 // DEFAULT IMPLEMENTATION
 //////////////////////////////////////////////////////////////////////
 
-data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
-    override val environment: Env,
-    override val agents: Set<Agent<Belief, Goal, Env>>
-) : MAS<Belief, Goal, Env> {
-
-    override fun run() {
-        TODO()
-    }
-}
-
-data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
-    override val beliefs: Collection<Belief>,
-    override val plans: List<Plan<Belief, Goal, Env, Any, Any, Any>>
-) : Agent<Belief, Goal, Env> {
-
-    override suspend fun <PlanResult> achieve(goal: Goal): PlanResult {
-        return TODO()
-    }
-}
 
 @JaktaDSL
 data class PlanScopeImpl<Belief : Any, Goal : Any, Env : Environment, Context : Any>(
@@ -115,6 +98,71 @@ data class PlanScopeImpl<Belief : Any, Goal : Any, Env : Environment, Context : 
 data class GuardScopeImpl<Belief : Any>(
     override val beliefs: Collection<Belief>
 ) : GuardScope<Belief>
+
+
+data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
+    override val environment: Env,
+    override val agents: Set<Agent<Belief, Goal, Env>>
+) : MAS<Belief, Goal, Env> {
+
+    override fun run() {
+        TODO()
+    }
+}
+
+data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
+    override val beliefs: Collection<Belief>,
+    override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
+    override val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>
+) : Agent<Belief, Goal, Env> {
+
+    override suspend fun <PlanResult> achieve(goal: Goal): PlanResult {
+        return TODO()
+    }
+}
+
+data class BeliefAdditionPlan<Belief: Any, Goal: Any, Env: Environment, Context: Any, PlanResult>(
+    override val trigger: (Belief) -> Context?,
+    override val guard: GuardScope<Belief>.(Context) -> Context?,
+    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
+    // override val resultType: KType
+
+): Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult>
+
+data class BeliefRemovalPlan<Belief: Any, Goal: Any, Env: Environment, Context: Any, PlanResult>(
+    override val trigger: (Belief) -> Context?,
+    override val guard: GuardScope<Belief>.(Context) -> Context?,
+    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
+    // override val resultType: KType
+
+): Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult>
+
+
+data class GoalAdditionPlan<Belief: Any, Goal: Any, Env: Environment, Context: Any, PlanResult>(
+    override val trigger: (Goal) -> Context?,
+    override val guard: GuardScope<Belief>.(Context) -> Context?,
+    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
+    // override val resultType: KType
+
+): Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult>
+
+data class GoalRemovalPlan<Belief: Any, Goal: Any, Env: Environment, Context: Any, PlanResult>(
+    override val trigger: (Goal) -> Context?,
+    override val guard: GuardScope<Belief>.(Context) -> Context?,
+    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
+    // override val resultType: KType
+
+): Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult>
+
+data class GoalFailurePlan<Belief: Any, Goal: Any, Env: Environment, Context: Any, PlanResult>(
+    override val trigger: (Goal) -> Context?,
+    override val guard: GuardScope<Belief>.(Context) -> Context?,
+    override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
+    // override val resultType: KType
+
+): Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult>
+
+
 
 
 

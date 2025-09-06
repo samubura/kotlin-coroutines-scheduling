@@ -23,15 +23,15 @@ interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment> {
 
     fun believes(
         block: BeliefBuilder<Belief>.() -> Unit
-    ) : Collection<Belief>
+    )
 
     fun hasInitialGoals(
         block: GoalBuilder<Goal>.() -> Unit
-    ) : Sequence<Goal>
+    )
 
     fun hasPlans(
         block: PlanLibraryBuilder<Belief, Goal, Env>.() -> Unit
-    ): Sequence<Plan<Belief, Goal, Env, Any, Any, Any>>  // TODO FIX GENERICS
+    )
 }
 
 @JaktaDSL
@@ -77,7 +77,7 @@ sealed interface TriggerBuilder<Belief : Any, Goal : Any, Env : Environment> {
     sealed interface FailureInterception<Belief : Any, Goal : Any, Env : Environment> :
         TriggerBuilder<Belief, Goal, Env>{
         fun <Context : Any> goal(goalQuery: Goal.() -> Context?)
-                : PlanBuilder.Removal.Goal<Belief, Goal, Env, Context>
+                : PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context>
     }
 }
 
@@ -90,20 +90,20 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
         interface Belief<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
             Addition<Belief, Goal, Env, Context> {
 
-            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
-                    PlanBuilder.Addition.Belief<Belief, Goal, Env, OutputContext>
+            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
+                    PlanBuilder.Addition.Belief<Belief, Goal, Env, Context>
 
             infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Addition.Belief<Belief, Goal, Env, Context, PlanResult>
+                    Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult>
         }
 
         interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
             Addition<Belief, Goal, Env, Context> {
-            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
-                    PlanBuilder.Addition.Goal<Belief, Goal, Env, OutputContext>
+            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
+                    PlanBuilder.Addition.Goal<Belief, Goal, Env, Context>
 
             infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Addition.Goal<Belief, Goal, Env, Context, PlanResult>
+                    Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult>
         }
 
     }
@@ -111,20 +111,20 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
     sealed interface Removal<Belief : Any, Goal : Any, Env : Environment, Context : Any> {
         interface Belief<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
             Removal<Belief, Goal, Env, Context> {
-            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
-                    PlanBuilder.Removal.Belief<Belief, Goal, Env, OutputContext>
+            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
+                    PlanBuilder.Removal.Belief<Belief, Goal, Env, Context>
 
             infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Removal.Belief<Belief, Goal, Env, Context, PlanResult>
+                    Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult>
         }
 
         interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
             Removal<Belief, Goal, Env, Context> {
-            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
-                    PlanBuilder.Removal.Goal<Belief, Goal, Env, OutputContext>
+            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
+                    PlanBuilder.Removal.Goal<Belief, Goal, Env, Context>
 
             infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Removal.Goal<Belief, Goal, Env, Context, PlanResult>
+                    Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult>
         }
     }
 
@@ -132,11 +132,11 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
 
         interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
             FailureInterception<Belief, Goal, Env, Context> {
-            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
-                    PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, OutputContext>
+            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
+                    PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context>
 
             infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.GoalFailure<Belief, Goal, Env, Context, PlanResult>
+                    Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult>
         }
     }
 }

@@ -30,7 +30,7 @@ fun main() {
                 adding.belief {
                     listOf("a")
                 } onlyWhen {
-                    "listOf("
+                    listOf("b")
                 } triggers {
                     context.firstOrNull()
                     true
