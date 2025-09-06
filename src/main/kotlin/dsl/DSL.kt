@@ -8,49 +8,18 @@ package dsl
 annotation class JaktaDSL
 
 @JaktaDSL
-sealed interface TriggerBuilder<Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any> {
-
-    sealed interface Addition<Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any> :
-        TriggerBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>{
-
-        fun <PlanResult> belief(beliefQuery: Belief.() -> BeliefQueryResult?)
-                : PlanBuilder.Addition.Belief<Belief, Goal, Env, BeliefQueryResult, PlanResult>
-
-        fun <PlanResult> goal(goalQuery: Goal.() -> GoalQueryResult?)
-                : PlanBuilder.Addition.Goal<Belief, Goal, Env, GoalQueryResult, PlanResult>
-    }
-
-    sealed interface Removal<Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any> :
-        TriggerBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>{
-
-        fun <PlanResult> belief(beliefQuery: Belief.() -> BeliefQueryResult?)
-                : PlanBuilder.Removal.Belief<Belief, Goal, Env, BeliefQueryResult, PlanResult>
-
-        fun <PlanResult> goal(goalQuery: Goal.() -> GoalQueryResult?)
-                : PlanBuilder.Removal.Goal<Belief, Goal, Env, GoalQueryResult, PlanResult>
-    }
-
-    sealed interface FailureInterception<Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any> :
-        TriggerBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>{
-        fun <PlanResult> goal(goalQuery: Goal.() -> GoalQueryResult?)
-                : PlanBuilder.Removal.Goal<Belief, Goal, Env, GoalQueryResult, PlanResult>
-    }
-}
-
-
-@JaktaDSL
-interface MasBuilder<Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any> {
+interface MasBuilder<Belief : Any, Goal : Any, Env : Environment> {
 
     @JaktaDSL
     fun agent(
-        block: AgentBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
+        block: AgentBuilder<Belief, Goal, Env>.() -> Unit
     ): Agent<Belief, Goal, Env>
 
     fun environment (block: () -> Env)
 }
 
 @JaktaDSL
-interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any> {
+interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment> {
 
     fun believes(
         block: BeliefBuilder<Belief>.() -> Unit
@@ -61,7 +30,7 @@ interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment, BeliefQueryRe
     ) : Sequence<Goal>
 
     fun hasPlans(
-        block: PlanLibraryBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
+        block: PlanLibraryBuilder<Belief, Goal, Env>.() -> Unit
     ): Sequence<Plan<Belief, Goal, Env, Any, Any, Any>>  // TODO FIX GENERICS
 }
 
@@ -76,67 +45,99 @@ interface GoalBuilder<Goal : Any> {
 }
 
 @JaktaDSL
-interface PlanLibraryBuilder<Belief : Any, Goal : Any, Env: Environment, BeliefQueryResult : Any, GoalQueryResult : Any> {
-    val adding: TriggerBuilder.Addition<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>
-    val removing: TriggerBuilder.Removal<Belief, Goal, Env,  BeliefQueryResult, GoalQueryResult>
-    val failing: TriggerBuilder.FailureInterception<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>
+interface PlanLibraryBuilder<Belief : Any, Goal : Any, Env: Environment> {
+    val adding: TriggerBuilder.Addition<Belief, Goal, Env>
+    val removing: TriggerBuilder.Removal<Belief, Goal, Env,>
+    val failing: TriggerBuilder.FailureInterception<Belief, Goal, Env>
 }
 
 @JaktaDSL
-sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context : Any, PlanResult> {
+sealed interface TriggerBuilder<Belief : Any, Goal : Any, Env : Environment> {
 
-    sealed interface Addition<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> :
-        PlanBuilder<Belief, Goal, Env, Context, PlanResult> {
+    sealed interface Addition<Belief : Any, Goal : Any, Env : Environment> :
+        TriggerBuilder<Belief, Goal, Env>{
 
-        interface Belief<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> :
-            Addition<Belief, Goal, Env, Context, PlanResult> {
-            infix fun <OutputContext : Context> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?): //TODO Weird behavior
-                    PlanBuilder.Addition.Belief<Belief, Goal, Env, OutputContext, PlanResult>
+        fun <Context : Any> belief(beliefQuery: Belief.() -> Context?)
+                : PlanBuilder.Addition.Belief<Belief, Goal, Env, Context>
 
-            infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
+        fun <Context : Any> goal(goalQuery: Goal.() -> Context?)
+                : PlanBuilder.Addition.Goal<Belief, Goal, Env, Context>
+    }
+
+    sealed interface Removal<Belief : Any, Goal : Any, Env : Environment> :
+        TriggerBuilder<Belief, Goal, Env>{
+
+        fun <Context : Any> belief(beliefQuery: Belief.() -> Context?)
+                : PlanBuilder.Removal.Belief<Belief, Goal, Env, Context>
+
+        fun <Context : Any> goal(goalQuery: Goal.() -> Context?)
+                : PlanBuilder.Removal.Goal<Belief, Goal, Env, Context>
+    }
+
+    sealed interface FailureInterception<Belief : Any, Goal : Any, Env : Environment> :
+        TriggerBuilder<Belief, Goal, Env>{
+        fun <Context : Any> goal(goalQuery: Goal.() -> Context?)
+                : PlanBuilder.Removal.Goal<Belief, Goal, Env, Context>
+    }
+}
+
+@JaktaDSL
+sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context : Any> {
+
+    sealed interface Addition<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
+        PlanBuilder<Belief, Goal, Env, Context> {
+
+        interface Belief<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
+            Addition<Belief, Goal, Env, Context> {
+
+            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
+                    PlanBuilder.Addition.Belief<Belief, Goal, Env, OutputContext>
+
+            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
                     Plan.Addition.Belief<Belief, Goal, Env, Context, PlanResult>
         }
 
-        interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> :
-            Addition<Belief, Goal, Env, Context, PlanResult> {
-            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
-                    PlanBuilder.Addition.Goal<Belief, Goal, Env, Context, PlanResult>
+        interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
+            Addition<Belief, Goal, Env, Context> {
+            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
+                    PlanBuilder.Addition.Goal<Belief, Goal, Env, OutputContext>
 
-            infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
+            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
                     Plan.Addition.Goal<Belief, Goal, Env, Context, PlanResult>
         }
 
     }
 
-    sealed interface Removal<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> {
-        interface Belief<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> :
-            Removal<Belief, Goal, Env, Context, PlanResult> {
-            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
-                    PlanBuilder.Removal.Belief<Belief, Goal, Env, Context, PlanResult>
+    sealed interface Removal<Belief : Any, Goal : Any, Env : Environment, Context : Any> {
+        interface Belief<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
+            Removal<Belief, Goal, Env, Context> {
+            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
+                    PlanBuilder.Removal.Belief<Belief, Goal, Env, OutputContext>
 
-            infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
+            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
                     Plan.Removal.Belief<Belief, Goal, Env, Context, PlanResult>
         }
 
-        interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> :
-            Removal<Belief, Goal, Env, Context, PlanResult> {
-            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
-                    PlanBuilder.Removal.Goal<Belief, Goal, Env, Context, PlanResult>
+        interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
+            Removal<Belief, Goal, Env, Context> {
+            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
+                    PlanBuilder.Removal.Goal<Belief, Goal, Env, OutputContext>
 
-            infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
+            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
                     Plan.Removal.Goal<Belief, Goal, Env, Context, PlanResult>
         }
     }
 
-    sealed interface FailureInterception<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> {
+    sealed interface FailureInterception<Belief : Any, Goal : Any, Env : Environment, Context : Any> {
 
-        interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any, PlanResult> :
-            FailureInterception<Belief, Goal, Env, Context, PlanResult> {
-            infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
-                    PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context, PlanResult>
+        interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
+            FailureInterception<Belief, Goal, Env, Context> {
+            infix fun <OutputContext : Any> onlyWhen(guard: GuardScope<Belief>.(Context) -> OutputContext?):
+                    PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, OutputContext>
 
-            infix fun triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
+            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
                     Plan.GoalFailure<Belief, Goal, Env, Context, PlanResult>
         }
     }
 }
+

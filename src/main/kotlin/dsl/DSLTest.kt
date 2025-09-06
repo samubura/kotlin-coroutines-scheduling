@@ -27,11 +27,10 @@ fun main() {
             }
 
             hasPlans {
-
                 adding.belief {
-                    sequenceOf("a")
+                    listOf("a")
                 } onlyWhen {
-                    listOf("b")
+                    "listOf("
                 } triggers {
                     context.firstOrNull()
                     true

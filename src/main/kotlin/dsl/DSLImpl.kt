@@ -102,8 +102,8 @@ private abstract class PlanBuilderImpl<Belief : Any, Goal: Any, Env : Environmen
 //////////////////////////////////////////////////////////////////////
 
 @JaktaDSL
-fun <Belief : Any, Goal : Any, Env : Environment, BeliefQueryResult : Any, GoalQueryResult : Any> mas(
-    block: MasBuilder<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>.() -> Unit
+fun <Belief : Any, Goal : Any, Env : Environment> mas(
+    block: MasBuilder<Belief, Goal, Env>.() -> Unit
 ): MAS<Belief, Goal, Env> {
 //    val mb = MasBuilderImpl<Belief, Goal, Env, BeliefQueryResult, GoalQueryResult>()
 //    mb.apply(block)
