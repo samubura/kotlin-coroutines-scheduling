@@ -1,5 +1,6 @@
 package dsl
 
+import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 
 // ---------- Builders (DSL) ----------
@@ -78,19 +79,14 @@ private class PlanLibraryBuilderImpl<Belief: Any, Goal: Any, Env: Environment>(
     val goalPlans: MutableCollection<Plan.Goal<Belief, Goal, Env, *, *>>
 ) : PlanLibraryBuilder<Belief, Goal, Env> {
     override val adding: TriggerBuilder.Addition<Belief, Goal, Env>
-        get(){
-            return TriggerAdditionImpl(beliefPlans, goalPlans)
-        }
+        get() = TriggerAdditionImpl(beliefPlans, goalPlans)
     override val removing: TriggerBuilder.Removal<Belief, Goal, Env>
-        get() {
-            return TriggerRemovalImpl(beliefPlans, goalPlans)
-        }
+        get() = TriggerRemovalImpl(beliefPlans, goalPlans)
     override val failing: TriggerBuilder.FailureInterception<Belief, Goal, Env>
-        get() {
-            return TriggerFailureInterceptionImpl(goalPlans)
-        }
+        get() = TriggerFailureInterceptionImpl(goalPlans)
 }
 
+//TODO lot of duplicated code... how can we fix this?
 
 private class TriggerAdditionImpl<Belief: Any, Goal: Any, Env: Environment>(
     val beliefPlans: MutableCollection<Plan.Belief<Belief, Goal, Env, *, *>>,
@@ -114,7 +110,6 @@ private class TriggerRemovalImpl<Belief: Any, Goal: Any, Env: Environment>(
         GoalRemovalPlanBuilderImpl(goalPlans, goalQuery)
 }
 
-
 private class TriggerFailureInterceptionImpl<Belief: Any, Goal: Any, Env: Environment>(
     val goalPlans: MutableCollection<Plan.Goal<Belief, Goal, Env, *, *>>
 ) : TriggerBuilder.FailureInterception<Belief, Goal, Env> {
@@ -135,9 +130,11 @@ private class BeliefAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Envir
         return this
     }
 
-    override fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult)
-    : Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult> {
-        val plan = BeliefAdditionPlan(trigger, guard, body)
+    override fun <PlanResult> triggers(
+        body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+        resultType: KType
+    ) : Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult> {
+        val plan = BeliefAdditionPlan(trigger, guard, body, resultType)
         beliefPlans += plan
         return plan
     }
@@ -155,9 +152,11 @@ private class GoalAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environ
         return this
     }
 
-    override fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult)
-            : Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult> {
-        val plan = GoalAdditionPlan(trigger, guard, body)
+    override fun <PlanResult> triggers(
+        body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+        resultType: KType
+    ) : Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult> {
+        val plan = GoalAdditionPlan(trigger, guard, body, resultType)
         goalPlans += plan
         return plan
     }
@@ -175,9 +174,11 @@ private class BeliefRemovalPlanBuilderImpl<Belief : Any, Goal: Any, Env : Enviro
         return this
     }
 
-    override fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult)
-            : Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult> {
-        val plan = BeliefRemovalPlan(trigger, guard, body)
+    override fun <PlanResult> triggers(
+        body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+        resultType: KType
+    ) : Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult> {
+        val plan = BeliefRemovalPlan(trigger, guard, body, resultType)
         beliefPlans += plan
         return plan
     }
@@ -195,9 +196,11 @@ private class GoalRemovalPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environm
         return this
     }
 
-    override fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult)
-            : Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult> {
-        val plan = GoalRemovalPlan(trigger, guard, body)
+    override fun <PlanResult> triggers(
+        body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+        resultType: KType
+    ) : Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult> {
+        val plan = GoalRemovalPlan(trigger, guard, body, resultType)
         goalPlans += plan
         return plan
     }
@@ -215,9 +218,11 @@ private class GoalFailurePlanBuilderImpl<Belief : Any, Goal: Any, Env : Environm
         return this
     }
 
-    override fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult)
-            : Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult> {
-        val plan = GoalFailurePlan(trigger, guard, body)
+    override fun <PlanResult> triggers(
+        body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+        resultType: KType
+    ) : Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult> {
+        val plan = GoalFailurePlan(trigger, guard, body, resultType)
         goalPlans += plan
         return plan
     }

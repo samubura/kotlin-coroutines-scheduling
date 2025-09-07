@@ -1,5 +1,8 @@
 package dsl
 
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
+
 //////////////////////////////////////////////////////////////////////
 // DSL
 //////////////////////////////////////////////////////////////////////
@@ -97,8 +100,10 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
             infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
                     PlanBuilder.Addition.Belief<Belief, Goal, Env, Context>
 
-            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult>
+            fun <PlanResult> triggers(
+                body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+                resultType: KType
+            ): Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult>
         }
 
         interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
@@ -106,8 +111,10 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
             infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
                     PlanBuilder.Addition.Goal<Belief, Goal, Env, Context>
 
-            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult>
+            fun <PlanResult> triggers(
+                body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+                resultType: KType
+            ): Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult>
         }
 
     }
@@ -118,8 +125,10 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
             infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
                     PlanBuilder.Removal.Belief<Belief, Goal, Env, Context>
 
-            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult>
+            fun <PlanResult> triggers(
+                body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+                resultType: KType
+            ): Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult>
         }
 
         interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
@@ -127,8 +136,10 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
             infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
                     PlanBuilder.Removal.Goal<Belief, Goal, Env, Context>
 
-            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult>
+            fun <PlanResult> triggers(
+                body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+                resultType: KType
+            ): Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult>
         }
     }
 
@@ -139,9 +150,50 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
             infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
                     PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context>
 
-            infix fun <PlanResult> triggers(body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult):
-                    Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult>
+            fun <PlanResult> triggers(
+                body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
+                resultType: KType
+            ): Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult>
         }
     }
 }
+
+
+inline infix fun <Belief : Any, Goal : Any, Env : Environment, Context : Any, reified PlanResult>
+PlanBuilder.Addition.Belief<Belief, Goal, Env, Context>.triggers(
+    noinline body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult
+): Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult> {
+    return this.triggers(body, typeOf<PlanResult>())
+}
+
+inline infix fun <Belief : Any, Goal : Any, Env : Environment, Context : Any, reified PlanResult>
+        PlanBuilder.Addition.Goal<Belief, Goal, Env, Context>.triggers(
+    noinline body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult
+): Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult> {
+    return this.triggers(body, typeOf<PlanResult>())
+}
+
+inline infix fun <Belief : Any, Goal : Any, Env : Environment, Context : Any, reified PlanResult>
+PlanBuilder.Removal.Belief<Belief, Goal, Env, Context>.triggers(
+    noinline body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult
+): Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult> {
+    return this.triggers(body, typeOf<PlanResult>())
+}
+
+inline infix fun <Belief : Any, Goal : Any, Env : Environment, Context : Any, reified PlanResult>
+        PlanBuilder.Removal.Goal<Belief, Goal, Env, Context>.triggers(
+    noinline body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult
+): Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult> {
+    return this.triggers(body, typeOf<PlanResult>())
+}
+
+inline infix fun <Belief : Any, Goal : Any, Env : Environment, Context : Any, reified PlanResult>
+        PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context>.triggers(
+    noinline body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult
+): Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult> {
+    return this.triggers(body, typeOf<PlanResult>())
+}
+
+
+
 

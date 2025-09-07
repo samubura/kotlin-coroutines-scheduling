@@ -1,6 +1,5 @@
 package dsl
 
-import kotlinx.coroutines.runBlocking
 import kotlin.reflect.KType
 
 interface MAS<Belief : Any, Goal : Any, Env : Environment >{
@@ -23,15 +22,14 @@ sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity
     val trigger: (TriggerEntity) -> Context?
     val guard : GuardScope<Belief>.(Context) -> Context?
     val body :  suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult
-
-    //TODO val resultType : KType
+    val resultType : KType
 
     fun isRelevant(e: TriggerEntity, desiredResult: KType) : Boolean =
-        //TODO resultType == desiredResult &&
+        resultType == desiredResult &&
         this.trigger(e) != null
 
     fun isApplicable(guardScope: GuardScope<Belief>, e : TriggerEntity, desiredResult: KType) : Boolean =
-        //TODO resultType == desiredResult &&
+        resultType == desiredResult &&
             when (val trig = trigger(e)) {
                 null -> false
                 else -> when (val g = guard) {
@@ -128,7 +126,7 @@ data class BeliefAdditionPlan<Belief: Any, Goal: Any, Env: Environment, Context:
     override val trigger: (Belief) -> Context?,
     override val guard: GuardScope<Belief>.(Context) -> Context?,
     override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-    // override val resultType: KType
+    override val resultType: KType
 
 ): Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult>
 
@@ -136,7 +134,7 @@ data class BeliefRemovalPlan<Belief: Any, Goal: Any, Env: Environment, Context: 
     override val trigger: (Belief) -> Context?,
     override val guard: GuardScope<Belief>.(Context) -> Context?,
     override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-    // override val resultType: KType
+    override val resultType: KType
 
 ): Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult>
 
@@ -145,7 +143,7 @@ data class GoalAdditionPlan<Belief: Any, Goal: Any, Env: Environment, Context: A
     override val trigger: (Goal) -> Context?,
     override val guard: GuardScope<Belief>.(Context) -> Context?,
     override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-    // override val resultType: KType
+    override val resultType: KType
 
 ): Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult>
 
@@ -153,7 +151,7 @@ data class GoalRemovalPlan<Belief: Any, Goal: Any, Env: Environment, Context: An
     override val trigger: (Goal) -> Context?,
     override val guard: GuardScope<Belief>.(Context) -> Context?,
     override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-    // override val resultType: KType
+    override val resultType: KType
 
 ): Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult>
 
@@ -161,8 +159,7 @@ data class GoalFailurePlan<Belief: Any, Goal: Any, Env: Environment, Context: An
     override val trigger: (Goal) -> Context?,
     override val guard: GuardScope<Belief>.(Context) -> Context?,
     override val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult,
-    // override val resultType: KType
-
+    override val resultType: KType
 ): Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult>
 
 
