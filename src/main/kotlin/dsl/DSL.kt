@@ -91,6 +91,8 @@ sealed interface TriggerBuilder<Belief : Any, Goal : Any, Env : Environment> {
 @JaktaDSL
 sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context : Any> {
 
+    fun registerPlan(plan: Plan<Belief, Goal, Env, *, Context, *>)
+
     sealed interface Addition<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
         PlanBuilder<Belief, Goal, Env, Context> {
 

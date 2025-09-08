@@ -1,6 +1,7 @@
 package dsl
 
 import kotlin.reflect.KType
+import kotlin.reflect.full.isSubtypeOf
 
 interface MAS<Belief : Any, Goal : Any, Env : Environment >{
     val environment: Env
@@ -25,11 +26,11 @@ sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity
     val resultType : KType
 
     fun isRelevant(e: TriggerEntity, desiredResult: KType) : Boolean =
-        resultType == desiredResult &&
+        resultType.isSubtypeOf(desiredResult) &&
         this.trigger(e) != null
 
     fun isApplicable(guardScope: GuardScope<Belief>, e : TriggerEntity, desiredResult: KType) : Boolean =
-        resultType == desiredResult &&
+        resultType.isSubtypeOf(desiredResult) &&
             when (val trig = trigger(e)) {
                 null -> false
                 else -> when (val g = guard) {

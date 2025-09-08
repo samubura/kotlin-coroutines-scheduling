@@ -119,7 +119,7 @@ private class TriggerFailureInterceptionImpl<Belief: Any, Goal: Any, Env: Enviro
 
 
 private class BeliefAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Context : Any>(
-    val beliefPlans: MutableCollection<Plan.Belief<Belief, Goal, Env, *, *>>,
+    var beliefPlans: Collection<Plan.Belief<Belief, Goal, Env, *, *>>,
     val trigger: Belief.() -> Context?,
     var guard: GuardScope<Belief>.(Context) -> Context? = { x -> x}
 ) : PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> {
@@ -133,12 +133,23 @@ private class BeliefAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Envir
     override fun <PlanResult> triggers(
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
         resultType: KType
-    ) : Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult> {
-        val plan = BeliefAdditionPlan(trigger, guard, body, resultType)
-        beliefPlans += plan
-        return plan
+    ) : Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult> = triggers2(resultType, trigger, guard, body, ::BeliefAdditionPlan)
+
+    override fun registerPlan(plan: Plan<Belief, Goal, Env, *, Context, *>) {
+        check(plan is Plan.Belief<*, *, *, *, *>) {
+            "Can only register Belief plans in this context"
+        }
+        beliefPlans += plan as Plan.Belief<Belief, Goal, Env, *, *>
     }
 }
+
+private fun <B : Any, G : Any, E : Environment, TE : Any, C : Any, PR, P : Plan<B, G, E, TE, C, PR>> PlanBuilder<B, G, E, C>.triggers2(
+    resultType: KType,
+    trigger: TE.() -> C?,
+    guard: GuardScope<B>.(C) -> C?,
+    body: suspend PlanScope<B, G, E, C>.() -> PR,
+    builder: ((TE) -> C?, GuardScope<B>.(C) -> C?, suspend PlanScope<B, G, E, C>.() -> PR, KType) -> P,
+): P = builder(trigger, guard, body, resultType).also { registerPlan(it) }
 
 private class GoalAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Context : Any>(
     val goalPlans: MutableCollection<Plan.Goal<Belief, Goal, Env, *, *>>,

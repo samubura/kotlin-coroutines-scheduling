@@ -13,6 +13,7 @@ repositories {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation(kotlin("reflect"))
     testImplementation(kotlin("test"))
 }
 
