@@ -124,20 +124,13 @@ private class BeliefAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Envir
 ) : PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> {
 
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
-    : PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> {
-        this.guard = guard
-        return this
-    }
+    : PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
     override fun <PlanResult> triggers(
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
         resultType: KType
     ) : Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult> =
-        buildPlan(resultType, trigger, guard, body, ::BeliefAdditionPlan)
-
-    override fun registerPlan(plan: Plan<Belief, Goal, Env, *, Context, *>) =
-        addBeliefPlan(plan as Plan.Belief<Belief, Goal, Env, *, *>)
-
+        buildAndRegisterPlan(resultType, trigger, guard, body, ::BeliefAdditionPlan, addBeliefPlan)
 }
 
 
@@ -148,19 +141,13 @@ private class GoalAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environ
 ) : PlanBuilder.Addition.Goal<Belief, Goal, Env, Context> {
 
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
-            : PlanBuilder.Addition.Goal<Belief, Goal, Env, Context> {
-        this.guard = guard
-        return this
-    }
+            : PlanBuilder.Addition.Goal<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
     override fun <PlanResult> triggers(
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
         resultType: KType
     ) : Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult> =
-        buildPlan(resultType, trigger, guard, body, ::GoalAdditionPlan)
-
-    override fun registerPlan(plan: Plan<Belief, Goal, Env, *, Context, *>) =
-        addGoalPlan(plan as Plan.Goal<Belief, Goal, Env, *, *>)
+        buildAndRegisterPlan(resultType, trigger, guard, body, ::GoalAdditionPlan, addGoalPlan)
 }
 
 private class BeliefRemovalPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Context : Any>(
@@ -170,19 +157,14 @@ private class BeliefRemovalPlanBuilderImpl<Belief : Any, Goal: Any, Env : Enviro
 ) : PlanBuilder.Removal.Belief<Belief, Goal, Env, Context> {
 
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
-            : PlanBuilder.Removal.Belief<Belief, Goal, Env, Context> {
-        this.guard = guard
-        return this
-    }
+            : PlanBuilder.Removal.Belief<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
     override fun <PlanResult> triggers(
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
         resultType: KType
     ) : Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult> =
-        buildPlan(resultType, trigger, guard, body, ::BeliefRemovalPlan)
+        buildAndRegisterPlan(resultType, trigger, guard, body, ::BeliefRemovalPlan, addBeliefPlan)
 
-    override fun registerPlan(plan: Plan<Belief, Goal, Env, *, Context, *>) =
-        addBeliefPlan(plan as Plan.Belief<Belief, Goal, Env, *, *>)
 }
 
 private class GoalRemovalPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Context : Any>(
@@ -192,20 +174,13 @@ private class GoalRemovalPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environm
 ) : PlanBuilder.Removal.Goal<Belief, Goal, Env, Context> {
 
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
-            : PlanBuilder.Removal.Goal<Belief, Goal, Env, Context> {
-        this.guard = guard
-        return this
-    }
+            : PlanBuilder.Removal.Goal<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
     override fun <PlanResult> triggers(
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
         resultType: KType
     ) : Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult> =
-        buildPlan(resultType, trigger, guard, body, ::GoalRemovalPlan)
-
-    override fun registerPlan(plan: Plan<Belief, Goal, Env, *, Context, *>) =
-        addGoalPlan(plan as Plan.Goal<Belief, Goal, Env, *, *>)
-
+        buildAndRegisterPlan(resultType, trigger, guard, body, ::GoalRemovalPlan, addGoalPlan)
 }
 
 private class GoalFailurePlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Context : Any>(
@@ -215,28 +190,24 @@ private class GoalFailurePlanBuilderImpl<Belief : Any, Goal: Any, Env : Environm
 ) : PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context> {
 
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
-            : PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context> {
-        this.guard = guard
-        return this
-    }
+            : PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
     override fun <PlanResult> triggers(
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
         resultType: KType
     ) : Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult> =
-        buildPlan(resultType, trigger, guard, body, ::GoalFailurePlan)
-
-    override fun registerPlan(plan: Plan<Belief, Goal, Env, *, Context, *>) =
-        addGoalPlan(plan as Plan.Goal<Belief, Goal, Env, *, *>)
+        buildAndRegisterPlan(resultType, trigger, guard, body, ::GoalFailurePlan, addGoalPlan)
 }
 
-private fun <B : Any, G : Any, E : Environment, TE : Any, C : Any, PR, P : Plan<B, G, E, TE, C, PR>> PlanBuilder<B, G, E, C>.buildPlan(
+
+private fun <B : Any, G : Any, E : Environment, TE : Any, C : Any, PR, P : Plan<B, G, E, TE, C, PR>> buildAndRegisterPlan(
     resultType: KType,
     trigger: TE.() -> C?,
     guard: GuardScope<B>.(C) -> C?,
     body: suspend PlanScope<B, G, E, C>.() -> PR,
     builder: ((TE) -> C?, GuardScope<B>.(C) -> C?, suspend PlanScope<B, G, E, C>.() -> PR, KType) -> P,
-): P = builder(trigger, guard, body, resultType).also { registerPlan(it) }
+    register: (P) -> Unit
+): P = builder(trigger, guard, body, resultType).also { register(it) }
 
 //////////////////////////////////////////////////////////////////////
 // ENTRYPOINT
