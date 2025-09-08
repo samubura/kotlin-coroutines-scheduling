@@ -14,9 +14,7 @@ annotation class JaktaDSL
 interface MasBuilder<Belief : Any, Goal : Any, Env : Environment> {
 
     @JaktaDSL
-    fun agent(
-        block: AgentBuilder<Belief, Goal, Env>.() -> Unit
-    ): Agent<Belief, Goal, Env>
+    fun agent(block: AgentBuilder<Belief, Goal, Env>.() -> Unit): Agent<Belief, Goal, Env>
 
     fun environment (block: () -> Env)
 
@@ -26,17 +24,19 @@ interface MasBuilder<Belief : Any, Goal : Any, Env : Environment> {
 @JaktaDSL
 interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment> {
 
-    fun believes(
-        block: BeliefBuilder<Belief>.() -> Unit
-    )
+    fun believes(block: BeliefBuilder<Belief>.() -> Unit)
 
-    fun hasInitialGoals(
-        block: GoalBuilder<Goal>.() -> Unit
-    )
+    fun hasInitialGoals(block: GoalBuilder<Goal>.() -> Unit)
 
-    fun hasPlans(
-        block: PlanLibraryBuilder<Belief, Goal, Env>.() -> Unit
-    )
+    fun hasPlans(block: PlanLibraryBuilder<Belief, Goal, Env>.() -> Unit)
+
+    fun addBelief(belief: Belief)
+
+    fun addGoal(goal : Goal)
+
+    fun addBeliefPlan(plan: Plan.Belief<Belief, Goal, Env, *, *>)
+
+    fun addGoalPlan(plan: Plan.Goal<Belief, Goal, Env, *, *>)
 
     fun build(): Agent<Belief, Goal, Env>
 }
@@ -56,6 +56,9 @@ interface PlanLibraryBuilder<Belief : Any, Goal : Any, Env: Environment> {
     val adding: TriggerBuilder.Addition<Belief, Goal, Env>
     val removing: TriggerBuilder.Removal<Belief, Goal, Env,>
     val failing: TriggerBuilder.FailureInterception<Belief, Goal, Env>
+
+    fun addBeliefPlan(plan: Plan.Belief<Belief, Goal, Env, *, *>)
+    fun addGoalPlan(plan: Plan.Goal<Belief, Goal, Env, *, *>)
 }
 
 @JaktaDSL
@@ -121,7 +124,9 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
 
     }
 
-    sealed interface Removal<Belief : Any, Goal : Any, Env : Environment, Context : Any> {
+    sealed interface Removal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
+        PlanBuilder<Belief, Goal, Env, Context> {
+
         interface Belief<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
             Removal<Belief, Goal, Env, Context> {
             infix fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?):
@@ -145,7 +150,8 @@ sealed interface PlanBuilder<Belief : Any, Goal: Any, Env : Environment, Context
         }
     }
 
-    sealed interface FailureInterception<Belief : Any, Goal : Any, Env : Environment, Context : Any> {
+    sealed interface FailureInterception<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
+     PlanBuilder<Belief, Goal, Env, Context> {
 
         interface Goal<Belief : Any, Goal : Any, Env : Environment, Context : Any> :
             FailureInterception<Belief, Goal, Env, Context> {
