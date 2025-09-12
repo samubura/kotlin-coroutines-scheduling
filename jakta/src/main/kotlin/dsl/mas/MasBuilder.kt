@@ -15,6 +15,8 @@ interface MasBuilder<Belief : Any, Goal : Any, Env : Environment> {
     @JaktaDSL
     fun agent(block: AgentBuilder<Belief, Goal, Env>.() -> Unit): Agent<Belief, Goal, Env>
 
+    fun withAgents(vararg agents: Agent<Belief, Goal, Env>)
+
     fun environment (block: () -> Env)
 
     fun build() : MAS<Belief, Goal, Env>
@@ -34,6 +36,10 @@ class MasBuilderImpl<Belief : Any, Goal : Any, Env : Environment> :
         val agent = agentBuilder.apply(block).build()
         agents += agent
         return agent
+    }
+
+    override fun withAgents(vararg agents: Agent<Belief, Goal, Env>) {
+        this.agents += agents
     }
 
     override fun environment(block: () -> Env) {

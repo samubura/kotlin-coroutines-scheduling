@@ -1,9 +1,13 @@
 package dsl
 
+import api.agent.Agent
 import api.environment.Environment
 import api.mas.MAS
+import dsl.agent.AgentBuilder
+import dsl.agent.AgentBuilderImpl
 import dsl.mas.MasBuilder
 import dsl.mas.MasBuilderImpl
+
 
 @JaktaDSL
 fun <Belief : Any, Goal : Any, Env : Environment> mas(
@@ -14,7 +18,16 @@ fun <Belief : Any, Goal : Any, Env : Environment> mas(
     return mb.build()
 }
 
-//TODO I want more entrypoints, to be able to define stuff in multiple files..
-// this should be easy, we can do it later
+@JaktaDSL
+fun <Belief : Any, Goal : Any, Env : Environment> agent(block: AgentBuilder<Belief, Goal, Env>.() -> Unit): Agent<Belief, Goal, Env> {
+    val ab = AgentBuilderImpl<Belief, Goal, Env>()
+    ab.apply(block)
+    return ab.build()
+}
+
+//TODO entrypoint for plans???
+// this is tricky due to the way the DSL is constructed
+// create an entrypoint for a single standalone plan is hard...
+
 
 
