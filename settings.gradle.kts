@@ -4,4 +4,4 @@ plugins {
 rootProject.name = "kotlin-coroutines-scheduling"
 
 
-include("api")
+include("jakta")

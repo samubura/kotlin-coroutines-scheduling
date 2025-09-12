@@ -21,9 +21,9 @@ class BeliefAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, 
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
             : PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
-    override fun <PlanResult> _triggers(
+    override fun <PlanResult> triggersImpl(
+        resultType: KType,
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
-        resultType: KType
     ) : Plan.Belief.Addition<Belief, Goal, Env, Context, PlanResult> =
         buildAndRegisterPlan(resultType, trigger, guard, body, ::BeliefAdditionPlan, addBeliefPlan)
 }
@@ -38,9 +38,9 @@ class GoalAdditionPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Co
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
             : PlanBuilder.Addition.Goal<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
-    override fun <PlanResult> _triggers(
+    override fun <PlanResult> triggersImpl(
+        resultType: KType,
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
-        resultType: KType
     ) : Plan.Goal.Addition<Belief, Goal, Env, Context, PlanResult> =
         buildAndRegisterPlan(resultType, trigger, guard, body, ::GoalAdditionPlan, addGoalPlan)
 }
@@ -54,9 +54,9 @@ class BeliefRemovalPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, C
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
             : PlanBuilder.Removal.Belief<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
-    override fun <PlanResult> _triggers(
+    override fun <PlanResult> triggersImpl(
+        resultType: KType,
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
-        resultType: KType
     ) : Plan.Belief.Removal<Belief, Goal, Env, Context, PlanResult> =
         buildAndRegisterPlan(resultType, trigger, guard, body, ::BeliefRemovalPlan, addBeliefPlan)
 
@@ -71,9 +71,9 @@ class GoalRemovalPlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Con
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
             : PlanBuilder.Removal.Goal<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
-    override fun <PlanResult> _triggers(
+    override fun <PlanResult> triggersImpl(
+        resultType: KType,
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
-        resultType: KType
     ) : Plan.Goal.Removal<Belief, Goal, Env, Context, PlanResult> =
         buildAndRegisterPlan(resultType, trigger, guard, body, ::GoalRemovalPlan, addGoalPlan)
 }
@@ -87,9 +87,9 @@ class GoalFailurePlanBuilderImpl<Belief : Any, Goal: Any, Env : Environment, Con
     override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?)
             : PlanBuilder.FailureInterception.Goal<Belief, Goal, Env, Context> = this.also{this.guard = guard}
 
-    override fun <PlanResult> _triggers(
+    override fun <PlanResult> triggersImpl(
+        resultType: KType,
         body: suspend PlanScope<Belief, Goal, Env, Context>.() -> PlanResult,
-        resultType: KType
     ) : Plan.Goal.Failure<Belief, Goal, Env, Context, PlanResult> =
         buildAndRegisterPlan(resultType, trigger, guard, body, ::GoalFailurePlan, addGoalPlan)
 }
