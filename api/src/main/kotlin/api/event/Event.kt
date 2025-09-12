@@ -1,45 +1,34 @@
 package api.event
 
 import api.intention.Intention
-import api.intention.IntentionID
-import api.plan.Plan
-import api.query.Query
 import kotlinx.coroutines.CompletableDeferred
 
 sealed interface Event {
     sealed interface Internal : Event {
-        val intention: Intention?
+        val intention: Intention? //TODO needed?
 
-        sealed interface Goal<PlanResult : Any> : Internal {
-            val completion: CompletableDeferred<PlanResult>
+        sealed interface Goal<G :Any, PlanResult> : Internal {
+            val completion: CompletableDeferred<PlanResult>?
+            val goal: G
 
-            sealed interface Test<TQ: Query.Test, PlanResult : Any> : Goal<PlanResult> {
-                val query: TQ
+            interface Add<G : Any, PlanResult> : Goal<G, PlanResult>
 
-                interface Add<TQ: Query.Test, PlanResult : Any> : Test<TQ, PlanResult>
+            interface Remove<G : Any, PlanResult> : Goal <G, PlanResult>
 
-                interface Remove<TQ: Query.Test, PlanResult : Any> : Test<TQ, PlanResult>
-            }
-
-            sealed interface Achieve<GoalType : Any, PlanResult : Any> : Goal<PlanResult> {
-                val goal: GoalType
-
-                interface Add<GoalType : Any, PlanResult : Any> : Achieve<GoalType, PlanResult>
-
-                interface Remove<GoalType : Any, PlanResult : Any> : Achieve <GoalType, PlanResult>
-            }
+            interface Failed<G: Any, PlanResult> : Goal <G, PlanResult>
         }
 
-        sealed interface Belief<out B : Any> : Internal {
+        sealed interface Belief<B : Any> : Internal {
             val belief: B
 
-            interface Add<out B : Any> : Belief<B>
+            interface Add<B : Any> : Belief<B>
 
-            interface Remove<out B : Any> : Belief<B>
+            interface Remove<B : Any> : Belief<B>
         }
 
         data class Step(override val intention: Intention) : Internal
     }
 
-    interface External : Event
+    //TODO external events
+    //interface External : Event
 }

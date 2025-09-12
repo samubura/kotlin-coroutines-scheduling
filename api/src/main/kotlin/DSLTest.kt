@@ -1,4 +1,6 @@
-package dsl
+import api.environment.Environment
+import dsl.mas
+import dsl.plan.triggers // TODO maybe not great that we have to import?
 
 
 class TestEnvironment : Environment {
@@ -18,12 +20,12 @@ fun main() {
         agent {
 
             believes {
-                + "pippo"
-                + "pluto"
+                +"pippo"
+                +"pluto"
             }
 
             hasInitialGoals {
-                ! 27
+                !27
             }
 
             hasPlans {
@@ -32,16 +34,17 @@ fun main() {
                 } onlyWhen {
                     listOf("b")
                 } triggers {
+                    agent.print("Hello")
                     context.firstOrNull()
                     true
                 }
 
                 failing.goal {
-                    takeIf{it >= 27}
+                    takeIf { it >= 27 }
                 } triggers {
                     val x = context + 10
                     environment.test()
-                    val result : String = agent.achieve(23)
+                    val result: String = agent.achieve(23)
                 }
             }
         }

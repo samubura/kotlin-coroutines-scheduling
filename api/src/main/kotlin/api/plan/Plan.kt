@@ -1,17 +1,58 @@
 package api.plan
 
-import api.query.Query
+import api.environment.Environment
+import kotlin.reflect.KType
+import kotlin.reflect.full.isSubtypeOf
 
-interface Plan<Trigger: PlanTrigger, Guard : Query.Test, PlanResult : Any> {
+sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity : Any, Context: Any, PlanResult> {
     val id: PlanID
-    val trigger: Trigger
-    val guard: Guard
+        get() = PlanID() //TODO check
+    val trigger: (TriggerEntity) -> Context?
+    val guard : GuardScope<Belief>.(Context) -> Context?
+    val body :  suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult
+    val resultType : KType
 
-    //TODO Does it make sense to have these generic? (Env and PlanResult)
-    // Or are these only useful when defining a plan, but not in practice?
-    // i.e. an agent will have different plans that have any type of result...
-    // but will have plans that all have the same (sub-)type of environment???
-    //val body : suspend PlanScope<Env>() -> PlanResult
+    fun isRelevant(e: TriggerEntity, desiredResult: KType) : Boolean =
+        resultType.isSubtypeOf(desiredResult) &&
+                this.trigger(e) != null
 
-    val body: suspend () -> PlanResult
+    fun isApplicable(guardScope: GuardScope<Belief>, e : TriggerEntity, desiredResult: KType) : Boolean =
+        resultType.isSubtypeOf(desiredResult) &&
+                when (val trig = trigger(e)) {
+                    null -> false
+                    else -> when (val g = guard) {
+                        else -> g(guardScope, trig) != null
+                    }
+                }
+
+    fun getPlanContext(guardScope: GuardScope<Belief>, e: TriggerEntity) : Context? =
+        when (val trig = trigger(e)) {
+            null -> null
+            else -> when (val g = guard) {
+                else -> g(guardScope, trig)
+            }
+        }
+
+    sealed interface Belief<B : Any, G: Any,  Env : Environment, Context: Any, PlanResult>
+        : Plan<B, G, Env, B,  Context, PlanResult> {
+
+        interface Addition<B : Any, G: Any,  Env : Environment, Context: Any, PlanResult>
+            : Belief<B, G, Env, Context, PlanResult>
+
+        interface Removal<B : Any, G: Any,  Env : Environment, Context: Any, PlanResult>
+            : Belief<B, G, Env, Context, PlanResult>
+    }
+
+    sealed interface Goal<B : Any, G: Any,  Env : Environment, Context: Any, PlanResult>
+        : Plan<B, G, Env, G,  Context, PlanResult> {
+
+        interface Addition<B : Any, G: Any,  Env : Environment, Context: Any, PlanResult>
+            : Goal<B, G, Env, Context, PlanResult>
+
+        interface Removal<B : Any, G: Any,  Env : Environment, Context: Any, PlanResult>
+            : Goal<B, G, Env, Context, PlanResult>
+
+        interface Failure<B : Any, G: Any,  Env : Environment, Context: Any, PlanResult>
+            : Goal<B, G, Env, Context, PlanResult>
+    }
 }

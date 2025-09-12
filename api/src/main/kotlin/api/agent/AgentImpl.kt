@@ -1,46 +1,59 @@
 package api.agent
 
-import api.belief.BeliefBase
-import api.event.Event
-import api.intention.IntentionInterceptor
-import api.intention.IntentionPool
+import api.environment.Environment
+import api.plan.GuardScope
 import api.plan.Plan
-import api.plan.PlanMatcher
-import api.plan.PlanTrigger
-import api.query.Query
-import api.query.TestQueryEngine
-import kotlinx.coroutines.channels.ReceiveChannel
-
-class AgentImpl<
-Belief : Any,
-TestQuery : Query.Test,
-TestQueryResult,
-Goal : Any,
-GoalQuery : Query.Goal,
-BeliefQuery : Query.Belief,
->(
-    override val beliefBase: BeliefBase<Belief>,
-    override val testQueryEngine: TestQueryEngine<Belief, TestQuery, BeliefBase<Belief>, TestQueryResult>,
-    override val plans: List<Plan<PlanTrigger, TestQuery, Any>>,
-    override val planMatcher: PlanMatcher<Belief, TestQuery, TestQueryResult, Goal, GoalQuery, BeliefQuery>,
-    override val intentionPool: IntentionPool,
-    override val intentionInterceptor: IntentionInterceptor,
-    override val events: ReceiveChannel<Event.Internal>,
-    override val id: AgentID
-) : Agent<Belief, TestQuery, TestQueryResult, Goal, GoalQuery, BeliefQuery, >{
 
 
-    override fun init() {
-        TODO("Not yet implemented")
+
+data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
+    val initialBeliefs: Collection<Belief>,
+    val initialGoals : List<Goal>,
+    override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
+    override val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>,
+    override val id: AgentID = AgentID(), //TODO Check
+) : Agent<Belief, Goal, Env>,
+    AgentActions<Belief, Goal>,
+    GuardScope<Belief>
+{
+    override val beliefs: Collection<Belief>
+        get() = TODO("Not yet implemented")
+
+
+    override suspend fun init() {
+        initialGoals.forEach { alsoAchieve(it) }
     }
 
     override suspend fun step() {
-        val event = events.receive()
-        when(event) {
-            is Event.Internal.Step -> TODO()
-            else -> planMatcher.matchPlan(event, beliefBase, plans)?.let {
-                //TODO launch plan on the agentContext
-            }
-        }
+        TODO("Not yet implemented")
     }
+
+    override suspend fun <PlanResult> achieve(goal: Goal): PlanResult {
+        TODO("Not yet implemented")
+    }
+
+    override fun print(message: String) {
+        TODO("Not yet implemented")
+    }
+
+    override fun alsoAchieve(goal: Goal) {
+        TODO("Not yet implemented")
+    }
+
+    override fun fail() {
+        TODO("Not yet implemented")
+    }
+
+    override fun succeed() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun believe(belief: Belief) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun forget(belief: Belief) {
+        TODO("Not yet implemented")
+    }
+
 }
