@@ -2,9 +2,7 @@ package dsl.plan
 
 import api.environment.Environment
 import api.plan.Plan
-import api.plan.PlanScope
 import dsl.JaktaDSL
-import kotlin.reflect.typeOf
 
 
 @JaktaDSL

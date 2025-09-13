@@ -1,4 +1,5 @@
 import api.environment.Environment
+import dsl.BeliefPlan
 import dsl.agent
 import dsl.mas
 import dsl.plan.triggers // TODO maybe not great that we have to import?
@@ -15,7 +16,12 @@ class TestContext() {
 
 fun main() {
 
-    val bob = agent<String, Int, TestEnvironment> { }
+
+
+    val p = BeliefPlan.of<String, Int, TestEnvironment> {
+        removing.belief { listOf(1,2,3) } triggers { println("triggered")}
+    }
+    val bob = agent<String, Int, TestEnvironment> { withBeliefPlans(p) }
 
     mas {
         environment {
