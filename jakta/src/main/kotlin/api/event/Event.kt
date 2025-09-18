@@ -2,6 +2,7 @@ package api.event
 
 import api.intention.Intention
 import kotlinx.coroutines.CompletableDeferred
+import kotlin.reflect.KType
 
 sealed interface Event {
     sealed interface Internal : Event {
@@ -10,6 +11,7 @@ sealed interface Event {
         sealed interface Goal<G :Any, PlanResult> : Internal {
             val completion: CompletableDeferred<PlanResult>?
             val goal: G
+            val resultType : KType
 
             interface Add<G : Any, PlanResult> : Goal<G, PlanResult>
 

@@ -1,8 +1,10 @@
 package api.plan
 
+import api.agent.AgentActions
 import api.environment.Environment
 import kotlin.reflect.KType
 import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.typeOf
 
 sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity : Any, Context: Any, PlanResult> {
     val id: PlanID
@@ -12,11 +14,11 @@ sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity
     val body :  suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult
     val resultType : KType
 
-    fun isRelevant(e: TriggerEntity, desiredResult: KType) : Boolean =
+    fun isRelevant(e: TriggerEntity, desiredResult: KType = typeOf<Any>()) : Boolean =
         resultType.isSubtypeOf(desiredResult) &&
                 this.trigger(e) != null
 
-    fun isApplicable(guardScope: GuardScope<Belief>, e : TriggerEntity, desiredResult: KType) : Boolean =
+    fun isApplicable(guardScope: GuardScope<Belief>, e : TriggerEntity, desiredResult: KType = typeOf<Any>()) : Boolean =
         resultType.isSubtypeOf(desiredResult) &&
                 when (val trig = trigger(e)) {
                     null -> false
@@ -33,6 +35,14 @@ sealed interface Plan<Belief : Any, Goal: Any,  Env : Environment, TriggerEntity
             }
         }
 
+    suspend fun run(
+        agent: AgentActions<Belief, Goal>,
+        environment: Env,
+        context: Context
+    ) : PlanResult = body(PlanScopeImpl(agent, environment, context))
+
+    //TODO It does not make sense for Belief Plans to have a PlanResult as it will never be awaited on... right?
+    // What are the implication on the overall design? Remove it or bind it as Unit?
     sealed interface Belief<B : Any, G: Any,  Env : Environment, Context: Any, PlanResult>
         : Plan<B, G, Env, B,  Context, PlanResult> {
 

@@ -1,5 +1,8 @@
 package api.agent
 
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
+
 /**
  * This interface offers internal actions that can be used in plans.
  */
@@ -12,7 +15,8 @@ interface AgentActions<Belief: Any, Goal: Any> {
     /**
      * Adds an event to the agent's queue to achieve a goal and suspends until the goal is achieved.
      */
-    suspend fun <PlanResult> achieve(goal: Goal) : PlanResult
+    @Deprecated("Use achieve instead", ReplaceWith("achieve(goal)"), DeprecationLevel.ERROR)
+    suspend fun <PlanResult> _achieve(goal: Goal, resultType: KType) : PlanResult
 
     /**
      * Adds an event to the agent's queue to achieve a goal and don't wait for it to complete.
@@ -40,3 +44,7 @@ interface AgentActions<Belief: Any, Goal: Any> {
     suspend fun forget(belief : Belief)
 
 }
+
+@Suppress("DEPRECATION_ERROR")
+suspend inline fun <B: Any, G: Any, reified PlanResult> AgentActions<B, G>.achieve(goal: G) : PlanResult =
+    _achieve(goal, typeOf<PlanResult>())
