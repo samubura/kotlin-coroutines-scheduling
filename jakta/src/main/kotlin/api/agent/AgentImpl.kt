@@ -2,15 +2,28 @@ package api.agent
 
 import api.belief.BeliefBase
 import api.environment.Environment
+import api.environment.EnvironmentContext
 import api.event.Event
 import api.event.GoalAddEvent
+import api.intention.IntentionInterceptor
+import api.intention.IntentionInterceptorImpl
+import api.intention.MutableIntentionPool
+import api.intention.MutableIntentionPoolImpl
 import api.plan.GuardScope
 import api.plan.Plan
 import api.plan.PlanScopeImpl
+import dsl.agent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newCoroutineContext
+import kotlinx.coroutines.plus
+import javax.annotation.processing.Completion
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
 import kotlin.reflect.KType
 
 
@@ -28,17 +41,23 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     private val beliefBase: BeliefBase<Belief> = BeliefBase.empty()
     private var agentScope: CoroutineScope? = null
 
+    private lateinit var agentContext: CoroutineContext
+
+    private val intentionPool: MutableIntentionPool = MutableIntentionPoolImpl()
+
     override val beliefs: Collection<Belief>
         get() = beliefBase.snapshot()
 
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun start(scope: CoroutineScope) {
         check(agentScope != null) { "Agent already initialized" }
         this.agentScope = scope
         //TODO check that this coroutine goes on without interception..
         agentScope?.launch { beliefBase.collect { events.send(it)} }
 
-        //TODO Set the intentionInterceptor in the Scope Context so that all later coroutines inherit it
+        // TODO:Set the intentionInterceptor in the Scope Context so that all later coroutines inherit it
+        agentContext = IntentionInterceptorImpl(intentionPool, events)
 
         //Now that everything is setup initial Belief and Goals so that the agent can start working
         beliefBase.addAll(initialBeliefs)
@@ -48,7 +67,7 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     override suspend fun step() = when(val event = events.receive()) {
         //TODO per rimuovere questo cast dovrei tipare Event.Internal con Belief e Goal (si può fare ma è subottimo?)
         is Event.Internal.Belief<*> -> handleBeliefEvent(event as Event.Internal.Belief<Belief>)
-        is Event.Internal.Goal<*,*> -> handleGoalEvent(event as Event.Internal.Goal<Goal, *>)
+        is Event.Internal.Goal<*,*> -> handleGoalEvent(event as Event.Internal.Goal<Goal, Any?>)
         is Event.Internal.Step -> handleStepEvent(event)
     }
 
@@ -65,20 +84,23 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         //TODO signal that there are no applicable plans? For now throw exception
         check(applicablePlans.isNotEmpty()) { "No applicable plans for belief event $event" }
 
-        val plan = applicablePlans.first()
-        val context = plan.getPlanContext(this, event.belief)!!
-        val environment = TODO("Get the environment, probably from the CoroutineContext?")
-        val scope = PlanScopeImpl(this, environment, context)
-
-        // plan.body(scope) //TODO this is not working!
-
-        agentScope!!.launch { plan.run(this@AgentImpl, environment, context) } //TODO neither this!
-        //TODO The problem seems to be with the * for the Context type in the Plan list..
-
+        val plan = applicablePlans.first() //TODO support other strategies for selecting the plan to execute
+        val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
+        val intentionContext = with(intentionPool) {
+            agentScope!!.nextIntention(event)
+        }
+        agentScope!!.launch(intentionContext + intentionContext.job) {
+            try {
+                plan.run(this@AgentImpl, this@AgentImpl, environment, event.belief)
+            } catch (_: Exception) {
+                handleFailure(event)
+            }
+        }
     }
 
-
-    private suspend fun handleGoalEvent(event: Event.Internal.Goal<Goal, *>) {
+    // TODO(In order to be capable to complete the completion, i had to remove the star projection and put Any?)
+    // This requires refactoring of type management
+    private suspend fun handleGoalEvent(event: Event.Internal.Goal<Goal, Any?>) {
         val relevantPlans = goalPlans.filter { when (event) {
                 is Event.Internal.Goal.Add<Goal, *> -> it is Plan.Goal.Addition
                 is Event.Internal.Goal.Remove<Goal, *> -> it is Plan.Goal.Removal
@@ -88,10 +110,28 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         //TODO signal that there are no relevant plans? For now throw exception
         check(relevantPlans.isNotEmpty()) { "No relevant plans for goal event $event" }
 
-
         val applicablePlans = relevantPlans.filter { it.isApplicable(this, event.goal) }
         //TODO signal that there are no applicable plans? For now throw exception
         check(applicablePlans.isNotEmpty()) { "No applicable plans for goal event $event" }
+
+        val plan = applicablePlans.first() //TODO support other strategies for selecting the plan to execute
+        val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
+        val intentionContext = with(intentionPool) {
+            agentScope!!.nextIntention(event)
+        }
+
+        agentScope!!.launch(intentionContext + intentionContext.job) {
+            try {
+                val result = plan.run(this@AgentImpl, this@AgentImpl, environment, event.goal)
+                event.completion?.complete(result)
+            } catch (_: Exception) {
+                handleFailure(event)
+            }
+        }
+    }
+
+    private suspend fun handleFailure(event: Event.Internal) {
+        TODO()
     }
 
     private suspend fun handleStepEvent(event: Event.Internal.Step) {

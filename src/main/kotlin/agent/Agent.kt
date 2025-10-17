@@ -30,6 +30,7 @@ class Agent (
 
     val events: Channel<Event> = Channel(Channel.Factory.UNLIMITED)
 
+    // Missing in the new implementation
     val agentContext = IntentionInterceptor +
             AgentContext(this)
 

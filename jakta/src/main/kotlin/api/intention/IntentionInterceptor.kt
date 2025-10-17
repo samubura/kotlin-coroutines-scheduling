@@ -23,7 +23,7 @@ class IntentionInterceptorImpl(
             override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
-                //TODO retrieve the current intention ID and Job from the context
+                //TODO retrieve the current intention ID and Job from the context 
                 val id : IntentionID = IntentionID()
                 val job : Job = Job()
                 // Create a new Intention with the updated continuation

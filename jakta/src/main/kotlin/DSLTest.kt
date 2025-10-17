@@ -33,6 +33,7 @@ fun main() {
 
         agent {
 
+
             believes {
                 +"pippo"
                 +"pluto"
@@ -58,7 +59,7 @@ fun main() {
                 } triggers {
                     val x = context + 10
                     environment.test()
-                    val result: String = agent.achieve(23)
+                    val result: String = agent.achieve(23) // Filtering plans on the return type of execution. Requires generic type reification.
                     result
                 }
             }
