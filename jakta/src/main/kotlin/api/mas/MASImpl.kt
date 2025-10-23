@@ -2,6 +2,7 @@ package api.mas
 
 import api.agent.Agent
 import api.environment.Environment
+import api.environment.EnvironmentContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -16,11 +17,16 @@ data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
 
     override fun run() {
         //TODO (mock implementation)
+        val environmentContext = EnvironmentContext(environment)
         runBlocking {
             supervisorScope {
                 agents.forEach { agent ->
-                    launch {
+                    launch(environmentContext) {
                         agent.start(this)
+                        while(true) {
+                            agent.step()
+                            //delay(500)
+                        }
                     }
                 }
             }
