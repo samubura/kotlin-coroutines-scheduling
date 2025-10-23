@@ -5,34 +5,27 @@ import api.environment.Environment
 import api.environment.EnvironmentContext
 import api.event.Event
 import api.event.GoalAddEvent
-import api.intention.IntentionInterceptor
 import api.intention.IntentionInterceptorImpl
 import api.intention.MutableIntentionPool
 import api.intention.MutableIntentionPoolImpl
 import api.plan.GuardScope
 import api.plan.Plan
-import api.plan.PlanScopeImpl
-import dsl.agent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newCoroutineContext
-import kotlinx.coroutines.plus
-import javax.annotation.processing.Completion
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
 import kotlin.reflect.KType
 
 
 data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     val initialBeliefs: Collection<Belief>,
     val initialGoals: List<Goal>,
-    override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>, //TODO * Context type is breaking stuff, see handleBeliefEvent
+    override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
     override val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>,
-    override val id: AgentID = AgentID(), //TODO Check
+    override val id: AgentID = AgentID(),
 ) : Agent<Belief, Goal, Env>,
     AgentActions<Belief, Goal>,
     GuardScope<Belief>
@@ -91,7 +84,7 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
             agentScope.nextIntention(event)
         }
 
-        agentScope.launch(intentionContext + intentionContext.job) {
+        agentScope.launch(agentContext + intentionContext + intentionContext.job) {
             try {
                 plan.run(this@AgentImpl, this@AgentImpl, environment, event.belief)
             } catch (_: Exception) {
@@ -122,7 +115,7 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
             agentScope.nextIntention(event)
         }
 
-        agentScope.launch(intentionContext + intentionContext.job) {
+        agentScope.launch(agentContext + intentionContext + intentionContext.job) {
             try {
                 val result = plan.run(this@AgentImpl, this@AgentImpl, environment, event.goal)
                 event.completion?.complete(result)
@@ -136,8 +129,9 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         TODO("fail")
     }
 
+    // TODO(Do we need the event instance here?)
     private suspend fun handleStepEvent(event: Event.Internal.Step) {
-        TODO("Not yet implemented")
+        intentionPool.stepNextIntention()
     }
 
 
