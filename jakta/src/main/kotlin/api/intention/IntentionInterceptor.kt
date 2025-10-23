@@ -1,7 +1,6 @@
 package api.intention
 
 import api.event.Event
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.SendChannel
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.ContinuationInterceptor
@@ -23,15 +22,16 @@ class IntentionInterceptorImpl(
             override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
-                //TODO retrieve the current intention ID and Job from the context 
-                val id : IntentionID = IntentionID()
-                val job : Job = Job()
+                val currentIntention: Intention = context[Intention] as Intention
                 // Create a new Intention with the updated continuation
-                val intention = Intention(id, job,{
-                    continuation.resumeWith(result)
-                })
+                val intention = Intention(
+                    currentIntention.id,
+                    { continuation.resumeWith(result) },
+                    currentIntention.job,
+                )
                 // Update the intention in the intention pool
                 intentionPool.tryPut(intention)
+                // TODO(Who deletes the intention from the intention pool?)
                 // Send the Step event to let the agent process the continuation
                 events.trySend(Event.Internal.Step(intention))
             }

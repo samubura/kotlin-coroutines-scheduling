@@ -16,11 +16,22 @@ interface IntentionPool {
 }
 
 interface AddableIntentionPool : IntentionPool {
+    /**
+     * The intention passed as argument is inserted in the intention pool.
+     * If the intention was not in the pool, then is added.
+     * If the intention was present in the pool, then its content is overridden with the one passed as parameter.
+     * If something goes wrong in the process, the method returns false, otherwise true.
+     */
     fun tryPut(intention: Intention) : Boolean
 }
 
 interface MutableIntentionPool : AddableIntentionPool {
     suspend fun drop(intentionID: IntentionID) : Boolean
+
+    /**
+     * Executes one step of the next intention to execute.
+     */
+    suspend fun stepNextIntention(): Unit
 }
 
 class MutableIntentionPoolImpl: MutableIntentionPool {
@@ -41,7 +52,14 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
             intentions.remove(it)
         } ?: false
 
-    override fun tryPut(intention: Intention): Boolean = intentions.add(intention)
+
+    override fun tryPut(intention: Intention): Boolean {
+        if (intentions.contains(intention)){
+            // I don't use the drop() because I don't want to cancel the job in this invocation.
+            intentions.remove(intention)
+        }
+        return intentions.add(intention)
+    }
 
     override suspend fun CoroutineScope.nextIntention(event: Event.Internal): Intention {
         val nextIntention = event.intention?.let {
@@ -49,7 +67,7 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
             intentions.find { intention -> intention == event.intention } ?: run {
                 // If the referenced intention does not exist, create a new one with that ID
                 // This is useful for debugging purposes, as it allows to name intentions
-                Intention(it.id, it.continuation, Job(coroutineContext.job), )
+                Intention(it.id, it.continuation, Job(coroutineContext.job))
             }
         } ?: run {
             Intention(job = Job(coroutineContext.job)) // TODO(Double-check, i'm not sure)
@@ -58,6 +76,14 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
         tryPut(nextIntention)
         return nextIntention
     }
+
+    override suspend fun stepNextIntention() {
+        continuations.tryReceive().getOrNull()?.let {
+            it()
+        }
+    }
+
+
 
 }
 

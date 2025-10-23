@@ -39,7 +39,7 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
 {
     private val events: Channel<Event.Internal> = Channel(Channel.UNLIMITED)
     private val beliefBase: BeliefBase<Belief> = BeliefBase.empty()
-    private var agentScope: CoroutineScope? = null
+    private lateinit var agentScope: CoroutineScope
 
     private lateinit var agentContext: CoroutineContext
 
@@ -51,10 +51,9 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun start(scope: CoroutineScope) {
-        check(agentScope != null) { "Agent already initialized" }
         this.agentScope = scope
         //TODO check that this coroutine goes on without interception..
-        agentScope?.launch { beliefBase.collect { events.send(it)} }
+        agentScope.launch { beliefBase.collect { events.send(it)} }
 
         // TODO:Set the intentionInterceptor in the Scope Context so that all later coroutines inherit it
         agentContext = IntentionInterceptorImpl(intentionPool, events)
@@ -85,11 +84,14 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         check(applicablePlans.isNotEmpty()) { "No applicable plans for belief event $event" }
 
         val plan = applicablePlans.first() //TODO support other strategies for selecting the plan to execute
+
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
+
         val intentionContext = with(intentionPool) {
-            agentScope!!.nextIntention(event)
+            agentScope.nextIntention(event)
         }
-        agentScope!!.launch(intentionContext + intentionContext.job) {
+
+        agentScope.launch(intentionContext + intentionContext.job) {
             try {
                 plan.run(this@AgentImpl, this@AgentImpl, environment, event.belief)
             } catch (_: Exception) {
@@ -117,10 +119,10 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         val plan = applicablePlans.first() //TODO support other strategies for selecting the plan to execute
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
         val intentionContext = with(intentionPool) {
-            agentScope!!.nextIntention(event)
+            agentScope.nextIntention(event)
         }
 
-        agentScope!!.launch(intentionContext + intentionContext.job) {
+        agentScope.launch(intentionContext + intentionContext.job) {
             try {
                 val result = plan.run(this@AgentImpl, this@AgentImpl, environment, event.goal)
                 event.completion?.complete(result)
@@ -131,7 +133,7 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     }
 
     private suspend fun handleFailure(event: Event.Internal) {
-        TODO()
+        TODO("fail")
     }
 
     private suspend fun handleStepEvent(event: Event.Internal.Step) {

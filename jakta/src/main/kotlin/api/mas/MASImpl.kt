@@ -2,6 +2,11 @@ package api.mas
 
 import api.agent.Agent
 import api.environment.Environment
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.supervisorScope
 
 
 data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
@@ -10,7 +15,15 @@ data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
 ) : MAS<Belief, Goal, Env> {
 
     override fun run() {
-        //TODO Implement the real one
-        agents.forEach{print(it)}
+        //TODO (mock implementation)
+        runBlocking {
+            supervisorScope {
+                agents.forEach { agent ->
+                    launch {
+                        agent.start(this)
+                    }
+                }
+            }
+        }
     }
 }

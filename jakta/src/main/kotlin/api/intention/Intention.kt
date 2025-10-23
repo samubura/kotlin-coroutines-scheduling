@@ -4,7 +4,7 @@ import kotlinx.coroutines.Job
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.CoroutineContext.Key
 
-interface Intention : CoroutineContext.Element {
+sealed interface Intention : CoroutineContext.Element {
     val id : IntentionID
     val continuation: () -> Unit
 
@@ -15,18 +15,25 @@ interface Intention : CoroutineContext.Element {
      */
     val job : Job
 
-    companion object {
+    companion object Key : CoroutineContext.Key<Intention> {
         operator fun invoke(
             id: IntentionID = IntentionID(),
             continuation: () -> Unit = {},
             job : Job,
-        ): Intention = object : Intention {
-            override val id: IntentionID = id
-            override val job = job
-            override val continuation: () -> Unit = continuation
-
-            private val context = object : CoroutineContext.Key<Intention> {}
-            override val key: CoroutineContext.Key<Intention> = context
-        }
+        ): Intention = IntentionImpl(id, continuation, job)
     }
+}
+
+internal class IntentionImpl(
+    override val id: IntentionID = IntentionID(),
+    override val continuation: () -> Unit = {},
+    override val job: Job,
+): Intention {
+    override val key: CoroutineContext.Key<Intention> = Intention.Key
+
+    override fun equals(other: Any?): Boolean {
+        return (this === other && id == other.id)
+    }
+
+    override fun hashCode(): Int = id.hashCode()
 }
