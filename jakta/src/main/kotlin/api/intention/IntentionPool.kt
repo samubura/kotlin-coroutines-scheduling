@@ -54,10 +54,12 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
 
 
     override fun tryPut(intention: Intention): Boolean {
-        if (intentions.contains(intention)){
+        if (intentions.contains(intention).also { println(intentions) }){
             // I don't use the drop() because I don't want to cancel the job in this invocation.
             intentions.remove(intention)
+            println("Updating intention ${intention.id}")
         }
+        continuations.trySend { intention.continuation } // TODO(check position of this invocation)
         return intentions.add(intention)
     }
 
@@ -79,6 +81,7 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
 
     override suspend fun stepNextIntention() {
         continuations.tryReceive().getOrNull()?.let {
+            println("Executing stepNextIntention")
             it()
         }
     }
