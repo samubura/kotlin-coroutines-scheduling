@@ -56,11 +56,15 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         initialGoals.forEach {alsoAchieve(it)}
     }
 
-    override suspend fun step() = when(val event = events.receive()) {
-        //TODO per rimuovere questo cast dovrei tipare Event.Internal con Belief e Goal (si può fare ma è subottimo?)
-        is Event.Internal.Belief<*> -> handleBeliefEvent(event as Event.Internal.Belief<Belief>)
-        is Event.Internal.Goal<*,*> -> handleGoalEvent(event as Event.Internal.Goal<Goal, Any?>)
-        is Event.Internal.Step -> handleStepEvent(event)
+    override suspend fun step() {
+        val event = events.receive()
+        println("Agent [$id] received event: $event")
+        when (event) {
+            //TODO per rimuovere questo cast dovrei tipare Event.Internal con Belief e Goal (si può fare ma è subottimo?)
+            is Event.Internal.Belief<*> -> handleBeliefEvent(event as Event.Internal.Belief<Belief>)
+            is Event.Internal.Goal<*, *> -> handleGoalEvent(event as Event.Internal.Goal<Goal, Any?>)
+            is Event.Internal.Step -> handleStepEvent(event)
+        }
     }
 
     private suspend fun handleBeliefEvent(event: Event.Internal.Belief<Belief>) {

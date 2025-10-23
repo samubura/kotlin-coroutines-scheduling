@@ -54,14 +54,30 @@ fun main() {
                     true
                 }
 
-//                failing.goal {
-//                    takeIf { it >= 27 }
-//                } triggers {
-//                    val x = context + 10
-//                    environment.test()
-//                    val result: String = agent.achieve(23) // Filtering plans on the return type of execution. Requires generic type reification.
-//                    result
-//                }
+                failing.goal {
+                    takeIf { it >= 27 }
+                } triggers {
+                    val x = context + 10
+                    environment.test()
+                    val result: String = agent.achieve(23) // Filtering plans on the return type of execution. Requires generic type reification.
+                    result
+                }
+            }
+        }
+    }
+
+    mas {
+        environment { TestEnvironment() }
+        agent {
+            hasInitialGoals {
+                !"addKnowledge"
+            }
+            hasPlans {
+                adding.goal {
+                    "addKnowledge"
+                } triggers {
+                    agent.print("Hello World!")
+                }
             }
         }
     }.run()
