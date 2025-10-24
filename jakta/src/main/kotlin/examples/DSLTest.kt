@@ -1,24 +1,12 @@
+package examples
+
 import api.agent.achieve
-import api.environment.Environment
 import dsl.BeliefPlan
 import dsl.agent
 import dsl.mas
 import dsl.plan.triggers // TODO maybe not great that we have to import?
 
-
-class TestEnvironment : Environment {
-    fun test(): Unit {}
-}
-
-class TestContext() {
-    fun test() : Unit {}
-}
-
-
 fun main() {
-
-
-
     val p = BeliefPlan.of<String, Int, TestEnvironment> {
         removing.belief { listOf(1,2,3) } triggers { println("triggered")}
     }
