@@ -136,9 +136,9 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         TODO("fail")
     }
 
-    // TODO(Do we need the event instance here?)
+    // TODO(Missing implementation for greedy event selection in case Step.intention was removed from intention pool)
     private suspend fun handleStepEvent(event: Event.Internal.Step) {
-        intentionPool.stepNextIntention()
+        intentionPool.stepIntention(event)
     }
 
 
