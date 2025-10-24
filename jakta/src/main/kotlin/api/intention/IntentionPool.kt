@@ -56,7 +56,7 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
             intentions.find { intention -> intention == event.intention } ?: run {
                 // If the referenced intention does not exist, create a new one with that ID
                 // This is useful for debugging purposes, as it allows to name intentions
-                Intention(it.id, it.job, it.continuations)
+                it
             }
         } ?: run {
             Intention(job = Job(coroutineContext.job))

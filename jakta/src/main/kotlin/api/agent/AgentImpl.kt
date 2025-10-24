@@ -5,6 +5,7 @@ import api.environment.Environment
 import api.environment.EnvironmentContext
 import api.event.Event
 import api.event.GoalAddEvent
+import api.intention.Intention
 import api.intention.IntentionInterceptorImpl
 import api.intention.MutableIntentionPool
 import api.intention.MutableIntentionPoolImpl
@@ -52,13 +53,13 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
 
         //Now that everything is setup initial Belief and Goals so that the agent can start working
         beliefBase.addAll(initialBeliefs)
-        initialGoals.forEach {alsoAchieve(it)}
+        initialGoals.forEach { alsoAchieve(it) }
     }
 
     override suspend fun step() {
-        // println("Waiting for the next event to execute... ")
+        println("Waiting for the next event to execute... ")
         val event = events.receive()
-        // println("Agent received event: $event")
+        println("Agent received event: $event")
         when (event) {
             //TODO per rimuovere questo cast dovrei tipare Event.Internal con Belief e Goal (si può fare ma è subottimo?)
             is Event.Internal.Belief<*> -> handleBeliefEvent(event as Event.Internal.Belief<Belief>)
@@ -120,6 +121,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
         val intentionContext = with(intentionPool) {
             agentScope.nextIntention(event)
+            //agentScope.nextIntention(event.intention)
         }
 
         agentScope.launch(agentContext + intentionContext + intentionContext.job) {
@@ -145,9 +147,11 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     @Deprecated("Use achieve instead", replaceWith = ReplaceWith("achieve(goal)"), level = DeprecationLevel.ERROR)
     override suspend fun <PlanResult> _achieve(goal: Goal, resultType: KType): PlanResult {
         val completion = CompletableDeferred<PlanResult>()
-        //TODO track intention?
-        events.trySend(GoalAddEvent(goal, resultType, completion, null))
-        return completion.await()
+        val intention = currentCoroutineContext()[Intention]
+        check(intention != null) { "Cannot happen that an achieve invocation comes from a null intention." }
+        println("Achieving $goal. Previous intention $intention")
+        events.trySend(GoalAddEvent(goal, resultType, completion, intention))
+        return completion.await() // Blocking the continuation
     }
 
     override fun print(message: String) {
@@ -173,7 +177,5 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     override suspend fun forget(belief: Belief) {
         TODO("Not yet implemented")
     }
-
-
 
 }
