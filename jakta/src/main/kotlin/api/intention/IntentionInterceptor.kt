@@ -24,7 +24,6 @@ class IntentionInterceptorImpl(
             override fun resumeWith(result: Result<T>) {
                 val currentIntention: Intention = context[Intention] as Intention
                 // Create a new Intention with the updated continuation
-                println("Resuming execution of intention with $result")
                 currentIntention.resumeWith(continuation, result)
                 // Send the Step event to let the agent process the continuation
                 events.trySend(Event.Internal.Step(currentIntention))

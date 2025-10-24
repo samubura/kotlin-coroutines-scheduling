@@ -20,7 +20,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KType
 
 
-data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
+open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     val initialBeliefs: Collection<Belief>,
     val initialGoals: List<Goal>,
     override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
@@ -56,9 +56,9 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     }
 
     override suspend fun step() {
-        println("Waiting for the next event to execute... ")
+        // println("Waiting for the next event to execute... ")
         val event = events.receive()
-        println("Agent received event: $event")
+        // println("Agent received event: $event")
         when (event) {
             //TODO per rimuovere questo cast dovrei tipare Event.Internal con Belief e Goal (si può fare ma è subottimo?)
             is Event.Internal.Belief<*> -> handleBeliefEvent(event as Event.Internal.Belief<Belief>)

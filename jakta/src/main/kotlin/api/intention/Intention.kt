@@ -57,7 +57,7 @@ internal class IntentionImpl(
 
     override fun step() {
         continuations.tryReceive().getOrNull()?.let {
-            println("Execution of one step of the intention.")
+            //println("Execution of one step of the intention.")
             it()
         }
     }
