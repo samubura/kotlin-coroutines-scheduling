@@ -1,4 +1,4 @@
-package api.agent.intention
+package api.intention
 
 import api.intention.Intention
 import api.intention.MutableIntentionPool
