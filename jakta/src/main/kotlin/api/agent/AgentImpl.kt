@@ -48,8 +48,7 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         //TODO check that this coroutine goes on without interception..
         agentScope.launch { beliefBase.collect { events.send(it)} }
 
-        // TODO:Set the intentionInterceptor in the Scope Context so that all later coroutines inherit it
-        agentContext = IntentionInterceptorImpl(intentionPool, events)
+        agentContext = scope.coroutineContext + IntentionInterceptorImpl(intentionPool, events)
 
         //Now that everything is setup initial Belief and Goals so that the agent can start working
         beliefBase.addAll(initialBeliefs)
@@ -57,8 +56,9 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     }
 
     override suspend fun step() {
+        println("Waiting for the next event to execute... ")
         val event = events.receive()
-        println("Agent [$id] received event: $event")
+        println("Agent received event: $event")
         when (event) {
             //TODO per rimuovere questo cast dovrei tipare Event.Internal con Belief e Goal (si può fare ma è subottimo?)
             is Event.Internal.Belief<*> -> handleBeliefEvent(event as Event.Internal.Belief<Belief>)
@@ -88,6 +88,9 @@ data class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
             agentScope.nextIntention(event)
         }
 
+        // intentionContext.job -> The execution is children of the intention which executes that event
+        // Job is the lifecycle of the coroutine, it manages the cancellation chain.
+        // The plus operations: It automatically replaces the keys in the context of this intention.
         agentScope.launch(agentContext + intentionContext + intentionContext.job) {
             try {
                 plan.run(this@AgentImpl, this@AgentImpl, environment, event.belief)
