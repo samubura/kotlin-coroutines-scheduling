@@ -13,6 +13,7 @@ interface IntentionPool {
      */
     suspend fun CoroutineScope.nextIntention(event: Event.Internal): Intention
 
+    fun getIntentionsSet(): Set<Intention>
 }
 
 interface AddableIntentionPool : IntentionPool {
@@ -54,12 +55,13 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
 
 
     override fun tryPut(intention: Intention): Boolean {
-        if (intentions.contains(intention).also { println(intentions) }){
+        if (intentions.contains(intention)){
             // I don't use the drop() because I don't want to cancel the job in this invocation.
             intentions.remove(intention)
-            println("Updating intention ${intention.id}")
         }
-        continuations.trySend { intention.continuation } // TODO(check position of this invocation)
+        continuations.trySend {
+            intention.continuation
+        } // TODO(check position of this invocation)
         return intentions.add(intention)
     }
 
@@ -69,7 +71,7 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
             intentions.find { intention -> intention == event.intention } ?: run {
                 // If the referenced intention does not exist, create a new one with that ID
                 // This is useful for debugging purposes, as it allows to name intentions
-                Intention(it.id, it.continuation, Job(coroutineContext.job))
+                Intention(it.id, it.continuation, it.job)
             }
         } ?: run {
             Intention(job = Job(coroutineContext.job)) // TODO(Double-check, i'm not sure)
@@ -81,12 +83,12 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
 
     override suspend fun stepNextIntention() {
         continuations.tryReceive().getOrNull()?.let {
-            println("Executing stepNextIntention")
+            println("PIPPO")
             it()
         }
     }
 
-
+    override fun getIntentionsSet(): Set<Intention> = setOf(*intentions.toTypedArray())
 
 }
 

@@ -32,7 +32,7 @@ internal class IntentionImpl(
     override val key: CoroutineContext.Key<Intention> = Intention.Key
 
     override fun equals(other: Any?): Boolean {
-        return (this === other && id == other.id)
+        return (other is Intention && id == other.id)
     }
 
     override fun hashCode(): Int = id.hashCode()
