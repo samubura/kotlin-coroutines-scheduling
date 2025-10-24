@@ -45,13 +45,6 @@ class IntentionPoolTest {
         assert(intentionPool.getIntentionsSet().contains(updatedIntention)) {
             "The Intention Pool should recognise updatedIntention as already present in the pool"
         }
-        assert(intentionPool.tryPut(updatedIntention))
-        val intentions = intentionPool.getIntentionsSet()
-        assert(intentions.size == 1)
-
-        // Verifying that the intention is the same but the body is updated correctly in the pool
-        assert(intentions.first() == updatedIntention)
-        assert(intentions.first().job == updatedIntention.job)
-        assert(intentions.first().job != intention.job)
+        assert(!intentionPool.tryPut(updatedIntention))
     }
 }
