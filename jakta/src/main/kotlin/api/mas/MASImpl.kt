@@ -21,11 +21,13 @@ data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
         runBlocking {
             supervisorScope {
                 agents.forEach { agent ->
-                    launch(environmentContext) {
-                        agent.start(this)
-                        while(true) {
-                            agent.step()
-                            //delay(500)
+                    launch(environmentContext) { //TODO(Future refactoring into ExecutionStrategy (using Dispatcher) HERE!)
+                        supervisorScope { // TODO(Double check SupervisorScope is needed here too)
+                            agent.start(this)
+                            while(true) {
+                                agent.step()
+                                //delay(500)
+                            }
                         }
                     }
                 }
