@@ -183,7 +183,11 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     override suspend fun terminate() = stop()
 
     override suspend fun stop() {
-        agentScope.coroutineContext.job.cancelAndJoin()
+        println("Terminating job: " + currentCoroutineContext().job)
+        println("Parent: " + currentCoroutineContext().job.parent?.toString())
+        println("AgentScope job: " +  agentScope.coroutineContext.job)
+
+        agentScope.coroutineContext.job.cancel()
     }
 
 }
