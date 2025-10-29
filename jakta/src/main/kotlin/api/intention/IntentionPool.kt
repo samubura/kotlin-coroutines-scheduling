@@ -5,6 +5,7 @@ import api.plan.Plan
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
 
 interface IntentionPool {
@@ -59,7 +60,7 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
                 it
             }
         } ?: run {
-            Intention(job = Job(coroutineContext.job))
+            Intention(job = Job(currentCoroutineContext().job))
         }
 
         tryPut(nextIntention)
