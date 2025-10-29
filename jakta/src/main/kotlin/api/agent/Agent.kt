@@ -12,5 +12,6 @@ interface Agent<Belief : Any, Goal: Any,  Env : Environment> {
     val goalPlans : List<Plan.Goal<Belief, Goal, Env, *, *>>
 
     fun start(scope: CoroutineScope)
+    suspend fun stop()
     suspend fun step()
 }

@@ -33,6 +33,9 @@ interface AgentActions<Belief: Any, Goal: Any> {
      */
     fun succeed()
 
+    /** Terminates the execution of the agent **/
+    suspend fun terminate()
+
     /**
      * Add the belief to the agent's belief base (eventually generating events).
      */

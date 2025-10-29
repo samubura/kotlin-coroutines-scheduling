@@ -14,8 +14,10 @@ import api.plan.Plan
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KType
@@ -176,6 +178,12 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
 
     override suspend fun forget(belief: Belief) {
         TODO("Not yet implemented")
+    }
+
+    override suspend fun terminate() = stop()
+
+    override suspend fun stop() {
+        agentScope.coroutineContext.job.cancelAndJoin()
     }
 
 }
