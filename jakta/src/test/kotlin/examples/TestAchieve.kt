@@ -2,6 +2,7 @@ package examples
 
 import api.agent.achieve
 import api.environment.TestEnvironment
+import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
 
@@ -14,19 +15,15 @@ suspend fun main(){
             }
             hasPlans {
                 adding.goal {
-                    if(this == "testAchieve")
-                        "pippo"
-                    else null
+                    ifGoalMatch("testAchieve")
                 } triggers {
                     agent.print("Hello World Before!")
                     var p: Int = agent.achieve("subGoal1")
-                    agent.print("Hello World After!")
+                    agent.print("Hello World After! $p")
                 }
 
                 adding.goal{
-                    if(this == "subGoal1")
-                        "pippo"
-                    else null
+                    ifGoalMatch("subGoal1")
                 } triggers {
                     agent.print("SubGoalInvocation!")
                     42

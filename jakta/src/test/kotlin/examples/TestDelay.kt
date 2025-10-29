@@ -1,26 +1,33 @@
 package examples
 
 import api.environment.TestEnvironment
+import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Test
 
-suspend fun main(){
-    mas {
-        environment { TestEnvironment() }
-        agent {
-            hasInitialGoals {
-                !"performDelay"
-            }
-            hasPlans {
-                adding.goal {
-                    "performDelay"
-                } triggers {
-                    agent.print("Hello World Before!")
-                    delay(5000)
-                    agent.print("Hello World After!")
+class TestDelay {
+    @Test
+    fun testDelay() = runTest {
+        mas {
+            environment { TestEnvironment() }
+            agent {
+                hasInitialGoals {
+                    !"performDelay"
+                }
+                hasPlans {
+                    adding.goal {
+                        ifGoalMatch("performDelay")
+                    } triggers {
+                        agent.print("Hello World Before!")
+                        delay(5000)
+                        agent.print("Hello World After!")
+                        agent.terminate()
+                    }
                 }
             }
-        }
-    }.run()
+        }.run()
+    }
 }

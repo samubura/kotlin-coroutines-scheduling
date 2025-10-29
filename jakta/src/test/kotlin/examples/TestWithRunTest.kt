@@ -1,6 +1,7 @@
 package examples
 
 import api.environment.TestEnvironment
+import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
 import kotlinx.coroutines.delay
@@ -8,7 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class TestHelloWorld {
+class TestWithRunTest {
 
     @Test
     fun testExecuteAchievementGoal() {
@@ -20,9 +21,7 @@ class TestHelloWorld {
                 }
                 hasPlans {
                     adding.goal {
-                        if(this == "executeAchievementGoal")
-                            "pippo"
-                        else null
+                        ifGoalMatch("executeAchievementGoal", "pippo")
                     } triggers {
                         println("inizio")
                         delay(5000)

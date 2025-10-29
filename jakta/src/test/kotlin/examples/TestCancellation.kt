@@ -4,6 +4,7 @@ import api.environment.EnvironmentContext
 import api.environment.TestEnvironment
 import dsl.agent
 import dsl.plan.triggers
+import ifGoalMatch
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -20,9 +21,7 @@ class TestCancellation {
                  }
                  hasPlans {
                      adding.goal {
-                         if (this == "executeAchievementGoal")
-                             "pippo"
-                         else null
+                        ifGoalMatch("executeAchievementGoal")
                      } triggers {
                          agent.alsoAchieve("loop")
                          delay(1000)
@@ -30,9 +29,7 @@ class TestCancellation {
                      }
 
                      adding.goal {
-                         if (this == "loop")
-                             "pippo"
-                         else null
+                         ifGoalMatch("loop")
                      } triggers {
                          println("Executing loop!")
                          delay(100)

@@ -2,6 +2,7 @@ package examples
 
 import api.agent.achieve
 import api.environment.TestEnvironment
+import ifGoalMatch
 import dsl.BeliefPlan
 import dsl.agent
 import dsl.mas
@@ -63,7 +64,7 @@ suspend fun main() {
             }
             hasPlans {
                 adding.goal {
-                    "addKnowledge"
+                    ifGoalMatch("addKnowledge", 2)
                 } triggers {
                     agent.print("Hello World!")
                 }
