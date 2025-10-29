@@ -20,12 +20,13 @@ suspend fun main(){
                     agent.print("Hello World Before!")
                     var p: Int = agent.achieve("subGoal1")
                     agent.print("Hello World After! $p")
+                    agent.terminate()
                 }
 
                 adding.goal{
                     ifGoalMatch("subGoal1")
                 } triggers {
-                    agent.print("SubGoalInvocation!")
+                    agent.print("SubGoal!")
                     42
                 }
             }

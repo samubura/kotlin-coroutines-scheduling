@@ -51,7 +51,7 @@ internal class IntentionImpl(
 ): Intention {
     override val key: Key<Intention> = Intention.Key
 
-    var observers: MutableList<(Intention) -> Unit> = mutableListOf()
+    val observers: MutableList<(Intention) -> Unit> = mutableListOf()
 
     override fun equals(other: Any?): Boolean {
         return (other is Intention && id == other.id)

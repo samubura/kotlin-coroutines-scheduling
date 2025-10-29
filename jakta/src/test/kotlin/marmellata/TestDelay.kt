@@ -1,9 +1,9 @@
-package examples
+package marmellata
 
 import api.environment.TestEnvironment
-import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
+import ifGoalMatch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test

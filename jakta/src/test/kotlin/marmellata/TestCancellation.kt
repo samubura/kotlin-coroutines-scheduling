@@ -1,4 +1,4 @@
-package examples
+package marmellata
 
 import api.environment.EnvironmentContext
 import api.environment.TestEnvironment
@@ -21,7 +21,7 @@ class TestCancellation {
                  }
                  hasPlans {
                      adding.goal {
-                        ifGoalMatch("executeAchievementGoal")
+                         ifGoalMatch("executeAchievementGoal")
                      } triggers {
                          agent.alsoAchieve("loop")
                          delay(1000)
@@ -42,7 +42,7 @@ class TestCancellation {
         runBlocking {
             val job = launch(EnvironmentContext(TestEnvironment())) {
                 agent.start(this)
-                while(true) {
+                while (true) {
                     agent.step()
                 }
             }
