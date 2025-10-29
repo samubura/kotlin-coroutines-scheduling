@@ -23,11 +23,11 @@ interface MasBuilder<Belief : Any, Goal : Any, Env : Environment> {
 }
 
 
-class MasBuilderImpl<Belief : Any, Goal : Any, Env : Environment> :
+open class MasBuilderImpl<Belief : Any, Goal : Any, Env : Environment> :
     MasBuilder<Belief, Goal, Env> {
 
-    private var environment: Env? = null
-    private val agents = mutableListOf<Agent<Belief, Goal, Env>>()
+    protected var environment: Env? = null
+    protected val agents = mutableListOf<Agent<Belief, Goal, Env>>()
 
     override fun agent(
         block: AgentBuilder<Belief, Goal, Env>.() -> Unit
