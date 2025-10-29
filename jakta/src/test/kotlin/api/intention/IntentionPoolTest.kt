@@ -1,21 +1,66 @@
 package api.intention
 
+import api.event.GoalAddEvent
 import api.intention.Intention
 import api.intention.MutableIntentionPool
 import api.intention.MutableIntentionPoolImpl
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFails
+import kotlin.test.assertNotEquals
 
 class IntentionPoolTest {
 
     private lateinit var intentionPool: MutableIntentionPool
-    private val intention: Intention = Intention(job = Job())
-    private val updatedIntention = Intention(id = intention.id, job = Job()) // Note: Same ID as intention
+    private lateinit var agentJob : Job
+    private lateinit var intentionJob : Job
+    private lateinit var otherJob : Job
+    private lateinit var intention: Intention
+    private lateinit var otherIntention: Intention
+
+    private lateinit var newGoalEvent : GoalAddEvent<String, Unit>
 
     @BeforeEach
     fun init() {
         intentionPool = MutableIntentionPoolImpl()
+        agentJob = SupervisorJob()
+        intentionJob = Job(agentJob)
+        otherJob = Job(agentJob)
+        intention = Intention(job = intentionJob)
+        otherIntention = Intention(job = otherJob)
+        newGoalEvent = GoalAddEvent(
+            goal = "NewGoal",
+            resultType = typeOf<Unit>(),
+            completion = CompletableDeferred(),
+            intention = null
+        )
+    }
+
+    @Test
+    fun testIntentionsEquivalence() {
+        assert(intention == Intention(id = intention.id, job = Job())){
+            "The two intentions should be considered equals since their ID is the same, even if their job is different"
+        }
+        assert(intention != Intention(job = Job())) {
+            "The two intentions should be considered different since their ID is different"
+        }
     }
 
     @Test
@@ -26,25 +71,117 @@ class IntentionPoolTest {
         assert(intentionPool.getIntentionsSet().contains(intention)) {
             "The tryPut() operation was successful, but the intention is not in the pool"
         }
-        assert(intentionPool.getIntentionsSet().size == 1)
-    }
-
-    @Test
-    fun testIntentionsEquivalence() {
-        assert(intention.id == updatedIntention.id) {
-            "IntentionID equivalence is not working"
-        }
-        assert(intention == updatedIntention) {
-            "The two intentions should be considered equals since their ID is the same"
+        assert(intentionPool.getIntentionsSet().size == 1) {
+            "The intention pool should contain exactly one intention"
         }
     }
 
     @Test
-    fun testIntentionUpdate() {
+    fun testDoubleInsertion() {
         testInsertion()
-        assert(intentionPool.getIntentionsSet().contains(updatedIntention)) {
-            "The Intention Pool should recognise updatedIntention as already present in the pool"
-        }
-        assert(!intentionPool.tryPut(updatedIntention))
+        assertFails { testInsertion() }
     }
+
+    @Test
+    fun testDropIntention() {
+        testInsertion()
+        runTest {
+            assert(intentionPool.drop(intention.id)) {
+                "It should be possible to drop an existing intention from the pool"
+            }
+        }
+        assert(!intentionPool.getIntentionsSet().contains(intention)) {
+            "The intention should no longer be present in the pool after being dropped"
+        }
+        assert(intentionPool.getIntentionsSet().isEmpty()) {
+            "The intention pool should be empty after dropping the only intention it contained"
+        }
+        assert(intention.job.isCancelled){
+            "The job associated to the dropped intention should be cancelled"
+        }
+        assert(otherIntention.job.isCancelled.not()){
+            "The job associated to an intention that has not been dropped should not be cancelled"
+        }
+        assert(agentJob.isCancelled.not()){
+            "The job associated to the agent should not be cancelled when dropping an intention"
+        }
+    }
+
+    @Test
+    fun testNextIntentionWithNewGoal(){
+        runTest {
+            launch(agentJob) {
+                assertEquals(
+                    agentJob, currentCoroutineContext().job.parent,
+                    "The coroutine context job's parent should be the agent job"
+                )
+
+                val nextIntention = intentionPool.nextIntention(newGoalEvent)
+                assertContains(
+                    agentJob.children, nextIntention.job.parent,
+                    "The intention job's parent should be a children of the agent job"
+                )
+
+                val otherNext = intentionPool.nextIntention(newGoalEvent)
+                assertContains(
+                    agentJob.children, otherNext.job.parent,
+                    "The other intention job's parent should be a children of the agent job"
+                )
+                assertNotEquals(
+                    nextIntention.job, otherNext.job,
+                    "Two different intentions should not have the same job"
+                )
+                assertEquals(
+                    nextIntention.job.parent, otherNext.job.parent,
+                    "But they should have the same parent job"
+                )
+            }
+        }
+    }
+
+    @Test
+    fun testNextIntentionWithExistingIntention(){
+        testInsertion()
+        val subGoalEvent = newGoalEvent.copy(intention = intention)
+        runTest {
+            launch(agentJob) {
+                val nextIntention = intentionPool.nextIntention(
+                    subGoalEvent
+                )
+                assertEquals(
+                    intention, nextIntention,
+                    "The intention returned by nextIntention() should be the same as the one referenced by the event"
+                )
+                assertEquals(
+                    intention.job, nextIntention.job,
+                    "The job of the intention returned by nextIntention() should be the same as the one referenced by the event"
+                )
+            }
+        }
+    }
+
+
+    @Test
+    fun testCancellingIntentions() {
+        runTest {
+            launch(agentJob) {
+                val nextIntention = intentionPool.nextIntention(newGoalEvent)
+                val otherNext = intentionPool.nextIntention(newGoalEvent)
+                assertFalse(nextIntention.job.isCancelled, "The intention job should not be cancelled initially")
+
+
+                agentJob.cancelAndJoin()
+                assert(nextIntention.job.isCancelled) {
+                    "The intention job should be cancelled after the agent job is cancelled"
+                }
+                assert(otherNext.job.isCancelled) {
+                    "The other intention job should be cancelled after the agent job is cancelled"
+                }
+                assert(intentionPool.getIntentionsSet().isEmpty()) {
+                    "Intentions are removed"
+                }
+            }
+        }
+    }
+
 }

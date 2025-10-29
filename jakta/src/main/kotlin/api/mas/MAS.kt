@@ -9,5 +9,5 @@ interface MAS<Belief : Any, Goal : Any, Env : Environment>{
     val environment: Env
     val agents : Set<Agent<Belief, Goal, Env>>
 
-    fun run() : Unit
+    suspend fun run() : Unit
 }

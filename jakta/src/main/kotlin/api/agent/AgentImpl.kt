@@ -87,14 +87,12 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
 
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
 
-        val intentionContext = with(intentionPool) {
-            agentScope.nextIntention(event)
-        }
+        val intention = intentionPool.nextIntention(event)
 
         // intentionContext.job -> The execution is children of the intention which executes that event
         // Job is the lifecycle of the coroutine, it manages the cancellation chain.
         // The plus operations: It automatically replaces the keys in the context of this intention.
-        agentScope.launch(agentContext + intentionContext + intentionContext.job) {
+        agentScope.launch(agentContext + intention + intention.job) {
             try {
                 plan.run(this@AgentImpl, this@AgentImpl, environment, event.belief)
             } catch (_: Exception) {
@@ -121,12 +119,9 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
 
         val plan = applicablePlans.first() //TODO support other strategies for selecting the plan to execute
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
-        val intentionContext = with(intentionPool) {
-            agentScope.nextIntention(event)
-            //agentScope.nextIntention(event.intention)
-        }
+        val intention = intentionPool.nextIntention(event)
 
-        agentScope.launch(agentContext + intentionContext + intentionContext.job) {
+        agentScope.launch(agentContext + intention + intention.job) {
             try {
                 val result = plan.run(this@AgentImpl, this@AgentImpl, environment, event.goal)
                 event.completion?.complete(result)

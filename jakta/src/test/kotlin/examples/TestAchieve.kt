@@ -1,12 +1,11 @@
-package api.agent
+package examples
 
 import api.agent.achieve
 import api.environment.TestEnvironment
 import dsl.mas
 import dsl.plan.triggers
-import kotlinx.coroutines.delay
 
-fun main(){
+suspend fun main(){
     mas {
         environment { TestEnvironment() }
         agent {

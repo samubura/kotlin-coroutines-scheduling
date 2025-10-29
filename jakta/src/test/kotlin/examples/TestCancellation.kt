@@ -1,18 +1,14 @@
-package api.agent
+package examples
 
 import api.environment.EnvironmentContext
 import api.environment.TestEnvironment
-import api.mas.testingMas
 import dsl.agent
 import dsl.plan.triggers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlin.ranges.step
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class TestCancellation {
 

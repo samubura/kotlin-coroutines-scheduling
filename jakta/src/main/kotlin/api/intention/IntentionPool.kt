@@ -4,6 +4,7 @@ import api.event.Event
 import api.plan.Plan
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
@@ -11,27 +12,36 @@ import kotlinx.coroutines.job
 interface IntentionPool {
     /**
      * Given an event, it returns the intention to execute it.
+     * @return a new intention if the event does not reference any existing intention,
+     *        or the referenced intention if it exists.
      */
-    suspend fun CoroutineScope.nextIntention(event: Event.Internal): Intention
+    suspend fun nextIntention(event: Event.Internal): Intention
 
+    /**
+     * Returns the set of intentions currently in the pool.
+     */
     fun getIntentionsSet(): Set<Intention>
 }
 
 interface AddableIntentionPool : IntentionPool {
+
     /**
-     * The intention passed as argument is inserted in the intention pool.
-     * If the intention was not in the pool, then is added.
-     * If the intention was present in the pool, then its content is overridden with the one passed as parameter.
-     * If something goes wrong in the process, the method returns false, otherwise true.
+     * Tries to add an intention to the pool.
+     * @return true if the intention was added, false if an intention with the same ID already exists.
      */
     fun tryPut(intention: Intention) : Boolean
 }
 
 interface MutableIntentionPool : AddableIntentionPool {
+
+    /**
+     * Drops the intention with the given ID from the pool.
+     * @return true if the intention was found and dropped, false otherwise.
+     */
     suspend fun drop(intentionID: IntentionID) : Boolean
 
     /**
-     * Executes one step of the next intention to execute.
+     * Executes one step of the intention referenced by this event.
      */
     suspend fun stepIntention(event: Event.Internal.Step): Unit
 }
@@ -44,14 +54,14 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
     // TODO(This needs to be invoked by someone)
     override suspend fun drop(intentionID: IntentionID): Boolean =
         intentions.find { it.id == intentionID }?.let {
-            it.job.cancel() // Cancel the job associated to the intention
+            it.job.cancelAndJoin() // Cancel the job associated to the intention
             intentions.remove(it)
         } ?: false
 
 
     override fun tryPut(intention: Intention): Boolean = intentions.add(intention)
 
-    override suspend fun CoroutineScope.nextIntention(event: Event.Internal): Intention {
+    override suspend fun nextIntention(event: Event.Internal): Intention {
         val nextIntention = event.intention?.let {
             // If the referenced intention exists, use its context
             intentions.find { intention -> intention == event.intention } ?: run {
@@ -60,7 +70,11 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
                 it
             }
         } ?: run {
-            Intention(job = Job(currentCoroutineContext().job))
+            val intentionJob = Job(currentCoroutineContext().job)
+            val newIntention = Intention(job = intentionJob)
+            //This is removing the intention if for some reason the job is manually completed
+            intentionJob.invokeOnCompletion { intentions.remove(newIntention) }
+            newIntention
         }
 
         tryPut(nextIntention)

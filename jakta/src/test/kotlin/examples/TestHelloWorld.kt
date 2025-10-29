@@ -1,24 +1,18 @@
-package api.agent
+package examples
 
 import api.environment.TestEnvironment
-import api.mas.testingMas
+import dsl.mas
 import dsl.plan.triggers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
-import kotlin.coroutines.coroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.fail
 
 class TestHelloWorld {
 
     @Test
     fun testExecuteAchievementGoal() {
-        testingMas {
+        val mas = mas {
             environment { TestEnvironment() }
             agent {
                 hasInitialGoals {
@@ -39,6 +33,8 @@ class TestHelloWorld {
                     }
                 }
             }
-        }.run()
+        }
+
+        runTest { mas.run() }
     }
 }

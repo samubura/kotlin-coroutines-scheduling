@@ -15,20 +15,14 @@ data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
     override val agents: Set<Agent<Belief, Goal, Env>>
 ) : MAS<Belief, Goal, Env> {
 
-    override fun run() {
-        //TODO (mock implementation)
+    override suspend fun run() =  supervisorScope {
         val environmentContext = EnvironmentContext(environment)
-        runBlocking {
-            supervisorScope {
-                agents.forEach { agent ->
-                    launch(environmentContext) { //TODO(Future refactoring into ExecutionStrategy (using Dispatcher) HERE!)
-                        supervisorScope { // TODO(Double check SupervisorScope is needed here too)
-                            agent.start(this)
-                            while(true) {
-                                agent.step()
-                                //delay(500)
-                            }
-                        }
+        agents.forEach { agent ->
+            launch(environmentContext) { //TODO(Future refactoring into ExecutionStrategy (using Dispatcher) HERE!)
+                supervisorScope { // TODO(Double check SupervisorScope is needed here too)
+                    agent.start(this)
+                    while(true) {
+                        agent.step()
                     }
                 }
             }
