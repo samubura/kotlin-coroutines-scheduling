@@ -1,7 +1,7 @@
 package api.agent
 
+import api.environment.TestEnvironment
 import api.mas.testingMas
-import examples.TestEnvironment
 import dsl.plan.triggers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext

@@ -1,6 +1,6 @@
-package examples
+package api.agent
 
-import api.agent.achieve
+import api.environment.TestEnvironment
 import dsl.BeliefPlan
 import dsl.agent
 import dsl.mas

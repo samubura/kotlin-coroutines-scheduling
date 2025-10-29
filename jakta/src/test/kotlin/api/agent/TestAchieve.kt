@@ -1,6 +1,7 @@
-package examples
+package api.agent
 
 import api.agent.achieve
+import api.environment.TestEnvironment
 import dsl.mas
 import dsl.plan.triggers
 import kotlinx.coroutines.delay

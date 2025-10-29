@@ -1,6 +1,4 @@
-package examples
-
-import api.environment.Environment
+package api.environment
 
 class TestEnvironment: Environment {
     fun test(): Unit {
