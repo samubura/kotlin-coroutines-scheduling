@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 
 internal data class BeliefBaseImpl<Belief: Any>(
     val beliefs: MutableSet<Belief> = mutableSetOf(),
-    val events : MutableSharedFlow<Event.Internal.Belief<Belief>> = MutableSharedFlow(), //TODO overflow?
+    val events : MutableSharedFlow<Event.Internal.Belief<Belief>> = MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE), //TODO overflow?
 ) : BeliefBase<Belief>,
     MutableSet<Belief> by beliefs,
     Flow<Event.Internal.Belief<Belief>> by events {

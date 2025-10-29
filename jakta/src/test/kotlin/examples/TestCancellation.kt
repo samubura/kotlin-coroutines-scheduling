@@ -4,7 +4,7 @@ import api.environment.EnvironmentContext
 import api.environment.TestEnvironment
 import dsl.agent
 import dsl.plan.triggers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -35,7 +35,9 @@ class TestCancellation {
                          else null
                      } triggers {
                          println("Executing loop!")
+                         delay(100)
                          agent.alsoAchieve("loop")
+
                      }
                  }
              }
@@ -49,38 +51,10 @@ class TestCancellation {
             }
             launch {
                 delay(1000)
-                job.cancel()
-
+                job.cancelAndJoin()
+                assert(job.isCancelled)
             }
         }
 
-    }
-
-    @Test
-    fun testlaunchWhile() {
-        runBlocking {
-            val job = launch {
-                while(true) {
-                    launch(Job()){
-                        delay(1000)
-                        println("pipopo")
-                    }
-                    delay(100)
-                }
-            }
-
-            launch {
-                delay(5000)
-                println("DONE")
-                job.cancel()
-            }
-        }
-    }
-
-    @Test
-    fun tpippo() {
-        while(true) {
-            println("pippo")
-        }
     }
 }

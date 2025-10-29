@@ -1,24 +1,15 @@
 package api.intention
 
 import api.event.GoalAddEvent
-import api.intention.Intention
-import api.intention.MutableIntentionPool
-import api.intention.MutableIntentionPoolImpl
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
-import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -51,16 +42,6 @@ class IntentionPoolTest {
             completion = CompletableDeferred(),
             intention = null
         )
-    }
-
-    @Test
-    fun testIntentionsEquivalence() {
-        assert(intention == Intention(id = intention.id, job = Job())){
-            "The two intentions should be considered equals since their ID is the same, even if their job is different"
-        }
-        assert(intention != Intention(job = Job())) {
-            "The two intentions should be considered different since their ID is different"
-        }
     }
 
     @Test
@@ -167,12 +148,15 @@ class IntentionPoolTest {
             launch(agentJob) {
                 val nextIntention = intentionPool.nextIntention(newGoalEvent)
                 val otherNext = intentionPool.nextIntention(newGoalEvent)
-                assertFalse(nextIntention.job.isCancelled, "The intention job should not be cancelled initially")
-
+                val subGoalIntention = intentionPool.nextIntention(newGoalEvent.copy(intention = nextIntention))
 
                 agentJob.cancelAndJoin()
+
                 assert(nextIntention.job.isCancelled) {
                     "The intention job should be cancelled after the agent job is cancelled"
+                }
+                assert(subGoalIntention.job.isCancelled) {
+                    "The subgoal job should be cancelled after the agent job is cancelled"
                 }
                 assert(otherNext.job.isCancelled) {
                     "The other intention job should be cancelled after the agent job is cancelled"

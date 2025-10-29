@@ -28,6 +28,8 @@ sealed interface Intention : CoroutineContext.Element {
      */
     fun step(): Unit
 
+    fun onReadyToStep(callback: (Intention) -> Unit): Unit
+
     /**
      * The intention is resumed after a suspension.
      */
@@ -47,7 +49,9 @@ internal class IntentionImpl(
     override val job: Job,
     override val continuations: Channel<() -> Unit> = Channel(Channel.UNLIMITED),
 ): Intention {
-    override val key: CoroutineContext.Key<Intention> = Intention.Key
+    override val key: Key<Intention> = Intention.Key
+
+    var observers: MutableList<(Intention) -> Unit> = mutableListOf()
 
     override fun equals(other: Any?): Boolean {
         return (other is Intention && id == other.id)
@@ -62,9 +66,18 @@ internal class IntentionImpl(
         }
     }
 
+    override fun onReadyToStep(callback: (Intention) -> Unit) {
+        observers.add(callback)
+    }
+
+    private fun notifyReadyToStep() {
+        observers.forEach { it(this) }
+    }
+
     override fun <T> resumeWith(continuation: Continuation<T>, result: Result<T>) {
         continuations.trySend {
             continuation.resumeWith(result)
         }
+        notifyReadyToStep()
     }
 }

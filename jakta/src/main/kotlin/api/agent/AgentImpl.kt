@@ -6,7 +6,7 @@ import api.environment.EnvironmentContext
 import api.event.Event
 import api.event.GoalAddEvent
 import api.intention.Intention
-import api.intention.IntentionInterceptorImpl
+import api.intention.IntentionInterceptor
 import api.intention.MutableIntentionPool
 import api.intention.MutableIntentionPoolImpl
 import api.plan.GuardScope
@@ -14,7 +14,6 @@ import api.plan.Plan
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
@@ -48,10 +47,12 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun start(scope: CoroutineScope) {
         this.agentScope = scope
-        //TODO check that this coroutine goes on without interception..
-        agentScope.launch { beliefBase.collect { events.send(it)} }
 
-        agentContext = scope.coroutineContext + IntentionInterceptorImpl(intentionPool, events)
+        //TODO check that these coroutine goes on without interception..
+        agentScope.launch { beliefBase.collect { events.send(it)} }
+        agentScope.launch { intentionPool.collect { events.send(it)} }
+
+        agentContext = scope.coroutineContext + IntentionInterceptor
 
         //Now that everything is setup initial Belief and Goals so that the agent can start working
         beliefBase.addAll(initialBeliefs)

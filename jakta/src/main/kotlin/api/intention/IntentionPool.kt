@@ -1,15 +1,14 @@
 package api.intention
 
 import api.event.Event
-import api.plan.Plan
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.job
 
-interface IntentionPool {
+interface IntentionPool : Flow<Event.Internal.Step> {
     /**
      * Given an event, it returns the intention to execute it.
      * @return a new intention if the event does not reference any existing intention,
@@ -46,7 +45,8 @@ interface MutableIntentionPool : AddableIntentionPool {
     suspend fun stepIntention(event: Event.Internal.Step): Unit
 }
 
-class MutableIntentionPoolImpl: MutableIntentionPool {
+class MutableIntentionPoolImpl(val events: MutableSharedFlow<Event.Internal.Step> = MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE))
+    : MutableIntentionPool, Flow<Event.Internal.Step> by events {
 
     /** List of intentions currently managed by the agent. **/
     private val intentions: MutableSet<Intention> = mutableSetOf()
@@ -72,6 +72,7 @@ class MutableIntentionPoolImpl: MutableIntentionPool {
         } ?: run {
             val intentionJob = Job(currentCoroutineContext().job)
             val newIntention = Intention(job = intentionJob)
+            newIntention.onReadyToStep { events.tryEmit(Event.Internal.Step(it)) }
             //This is removing the intention if for some reason the job is manually completed
             intentionJob.invokeOnCompletion { intentions.remove(newIntention) }
             newIntention
