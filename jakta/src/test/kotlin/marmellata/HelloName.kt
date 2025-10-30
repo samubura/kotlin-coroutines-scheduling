@@ -1,14 +1,10 @@
-package examples
+package marmellata
 
-import api.agent.achieve
 import api.environment.TestEnvironment
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
-import co.touchlab.kermit.platformLogWriter
-import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
-import kotlinx.coroutines.delay
 
 suspend fun main(){
 

@@ -16,13 +16,14 @@ object IntentionInterceptor : ContinuationInterceptor {
 
 
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
+
         return object : Continuation<T> {
             override val context: CoroutineContext = continuation.context
 
             override fun resumeWith(result: Result<T>) {
                 log.d {"Intercepting continuation with context: $context"}
                 val currentIntention: Intention = context[Intention] as Intention
-                currentIntention.resumeWith(continuation, result)
+                currentIntention.enqueue { continuation.resumeWith(result) }
             }
         }
     }
@@ -31,5 +32,6 @@ object IntentionInterceptor : ContinuationInterceptor {
         // No-op
     }
 
-    override val key: CoroutineContext.Key<*> = ContinuationInterceptor
+    override val key: CoroutineContext.Key<*>
+        get() = ContinuationInterceptor.Key
 }

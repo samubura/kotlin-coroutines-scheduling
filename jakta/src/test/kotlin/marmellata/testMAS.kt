@@ -1,4 +1,4 @@
-package examples
+package marmellata
 
 import api.environment.TestEnvironment
 import co.touchlab.kermit.Logger

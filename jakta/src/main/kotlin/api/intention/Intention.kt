@@ -31,10 +31,7 @@ sealed interface Intention : CoroutineContext.Element {
 
     fun onReadyToStep(callback: (Intention) -> Unit): Unit
 
-    /**
-     * The intention is resumed after a suspension.
-     */
-    fun <T> resumeWith(continuation: Continuation<T>, result: Result<T>): Unit
+    fun enqueue(continuation: () -> Unit): Unit
 
     companion object Key : CoroutineContext.Key<Intention> {
         operator fun invoke(
@@ -81,12 +78,9 @@ internal data class IntentionImpl(
         observers.forEach { it(this) }
     }
 
-    override fun <T> resumeWith(continuation: Continuation<T>, result: Result<T>) {
+    override fun enqueue(continuation: () -> Unit) {
         log.d{ "Resumed continuation and notify ready to step" }
-        continuations.trySend {
-            continuation.resumeWith(result)
-        }
+        continuations.trySend(continuation)
         notifyReadyToStep()
-
     }
 }

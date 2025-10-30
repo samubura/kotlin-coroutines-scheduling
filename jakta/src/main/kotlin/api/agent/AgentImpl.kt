@@ -13,6 +13,7 @@ import api.plan.GuardScope
 import api.plan.Plan
 import co.touchlab.kermit.Logger
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
@@ -126,6 +127,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         plan: Plan<Belief, Goal, Env, TriggerEntity, *, *>,
         completion : CompletableDeferred<Any?>? = null, //TODO Check if this Any? can be improved
     ){
+        log.d { "Launching plan $plan for event $event" }
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
         val intention = intentionPool.nextIntention(event)
 
@@ -170,7 +172,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
 
     // TODO(Missing implementation for greedy event selection in case Step.intention was removed from intention pool)
     private suspend fun handleStepEvent(event: Event.Internal.Step) {
-        log.d {""}
+        log.d {"Handling step event for intention ${event.intention.id.id}"}
         intentionPool.stepIntention(event)
     }
 
