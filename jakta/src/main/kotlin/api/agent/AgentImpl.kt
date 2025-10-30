@@ -28,6 +28,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
     override val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>,
     override val id: AgentID = AgentID(),
+    private val events : Channel<Event.Internal> = Channel(Channel.UNLIMITED)
 ) : Agent<Belief, Goal, Env>,
     AgentActions<Belief, Goal>,
     GuardScope<Belief>,
@@ -38,10 +39,6 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         Logger.config,
         "Agent[${id.id}]",
     )
-
-    companion object {
-        private val events = Channel<Event.Internal>(Channel.UNLIMITED)
-    }
 
     override val beliefs: Collection<Belief>
         get() = beliefBase.snapshot()
@@ -88,29 +85,14 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
             }
         ) ?: run {
             log.e { "No plan selected for belief event $event" }
-            handleFailure(event)
+            handleFailure(event, IllegalArgumentException("No plan selected for belief event $event"))
             return
         }
 
-        log.d { "Selected plan $plan" }
-
-        val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
-
-        val intention = intentionPool.nextIntention(event)
-
-        launch(IntentionInterceptor + intention + intention.job) {
-            try {
-                log.d { "Running plan $plan" }
-                plan.run(this@AgentImpl, this@AgentImpl, environment, event.belief)
-            } catch (_: Exception) {
-                handleFailure(event)
-            }
-        }
-
-        log.d { "Launched plan $plan" }
+        launchPlan(event, event.belief, plan)
     }
 
-    // TODO(In order to be capable to complete the completion, i had to remove the star projection and put Any?
+    // TODO In order to be capable to complete the completion, i had to remove the star projection and put Any?
     //  This requires refactoring of type management
     private suspend fun CoroutineScope.handleGoalEvent(event: Event.Internal.Goal<Goal, Any?>) {
 
@@ -130,20 +112,30 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
             }
         ) ?: run {
             log.e { "No plan selected for goal event $event" }
-            handleFailure(event)
+            handleFailure(event, IllegalArgumentException("No plan selected for goal event $event"))
             return
         }
 
+        launchPlan(event, event.goal, plan, event.completion)
+
+    }
+
+    private suspend fun <TriggerEntity: Any> CoroutineScope.launchPlan(
+        event: Event.Internal,
+        entity: TriggerEntity,
+        plan: Plan<Belief, Goal, Env, TriggerEntity, *, *>,
+        completion : CompletableDeferred<Any?>? = null, //TODO Check if this Any? can be improved
+    ){
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
         val intention = intentionPool.nextIntention(event)
 
         launch(IntentionInterceptor + intention + intention.job) {
             try {
                 log.d { "Running plan $plan" }
-                val result = plan.run(this@AgentImpl, this@AgentImpl, environment, event.goal)
-                event.completion?.complete(result)
-            } catch (_: Exception) {
-                handleFailure(event)
+                val result = plan.run(this@AgentImpl, this@AgentImpl, environment, entity)
+                completion?.complete(result)
+            } catch (e : Exception) {
+                handleFailure(event, e)
             }
         }
         log.d { "Launched plan $plan" }
@@ -165,16 +157,20 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
 
         if(applicable.isEmpty()) { log.e {"No applicable plans for $entityMessage: $entity" } }
 
-        return applicable.firstOrNull()
+        return applicable.firstOrNull()?.let{
+            log.d { "Selected plan $it for $entityMessage: $entity" }
+            it
+        }
     }
 
 
-    private suspend fun handleFailure(event: Event.Internal) {
-        TODO("fail")
+    private suspend fun handleFailure(event: Event.Internal, e: Exception) {
+        log.e { "Plan execution failed for event $event with exception: ${e.message}"  }
     }
 
     // TODO(Missing implementation for greedy event selection in case Step.intention was removed from intention pool)
     private suspend fun handleStepEvent(event: Event.Internal.Step) {
+        log.d {""}
         intentionPool.stepIntention(event)
     }
 

@@ -9,7 +9,7 @@ import ifGoalMatch
 import kotlinx.coroutines.delay
 
 suspend fun main() {
-    Logger.setMinSeverity(Severity.Debug)
+    Logger.setMinSeverity(Severity.Error)
 
     mas {
         environment { TestEnvironment() }
@@ -19,27 +19,37 @@ suspend fun main() {
             }
             hasPlans {
                 adding.goal {
-                    ifGoalMatch("hello")
+                    ifGoalMatch("goal")
                 } triggers {
-                    agent.print("Hello World")
-                    delay(3000)
-                    agent.print("Goodbye World!")
+                    agent.print("Hello PIPPO")
+                    agent.alsoAchieve("loop")
+                    delay(4000)
+                    agent.print("GOODBYE PIPPO")
+                    agent.terminate()
+                }
+
+                adding.goal {
+                    ifGoalMatch("loop")
+                } triggers {
+                    agent.print("Looping...")
+                    delay(5)
+                    agent.alsoAchieve("loop")
                 }
             }
         }
-//        agent {
-//            hasInitialGoals {
-//                !"goal"
-//            }
-//            hasPlans {
-//                adding.goal {
-//                    ifGoalMatch("goal")
-//                } triggers {
-//                    agent.print("Hello PLUTO!")
-//                    delay(1000)
-//                    agent.alsoAchieve("goal")
-//                }
-//            }
-//        }
+        agent {
+            hasInitialGoals {
+                !"goal"
+            }
+            hasPlans {
+                adding.goal {
+                    ifGoalMatch("goal")
+                } triggers {
+                    agent.print("Hello PLUTO!")
+                    delay(1000)
+                    agent.alsoAchieve("goal")
+                }
+            }
+        }
     }.run()
 }

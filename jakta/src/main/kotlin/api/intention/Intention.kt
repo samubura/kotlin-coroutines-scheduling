@@ -45,7 +45,7 @@ sealed interface Intention : CoroutineContext.Element {
     }
 }
 
-internal class IntentionImpl(
+internal data class IntentionImpl(
     override val id: IntentionID = IntentionID(),
     override val job: Job,
     override val continuations: Channel<() -> Unit> = Channel(Channel.UNLIMITED),

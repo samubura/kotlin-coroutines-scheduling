@@ -91,7 +91,10 @@ class MutableIntentionPoolImpl(
     }
 
     override suspend fun stepIntention(event: Event.Internal.Step) {
-        intentions.find { it == event.intention }?.step()
+        log.d { "Stepping intention ${event.intention.id.id}" }
+        intentions.find { it == event.intention }?.step() ?: run {
+            log.e { "Intention ${event.intention.id.id} not found" }
+        }
     }
 
     override fun getIntentionsSet(): Set<Intention> = setOf(*intentions.toTypedArray())
