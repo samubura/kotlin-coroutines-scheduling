@@ -11,125 +11,131 @@ import api.intention.MutableIntentionPool
 import api.intention.MutableIntentionPoolImpl
 import api.plan.GuardScope
 import api.plan.Plan
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
-import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KType
 
 
 open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
-    val initialBeliefs: Collection<Belief>,
-    val initialGoals: List<Goal>,
+    initialBeliefs: Collection<Belief>,
+    initialGoals: List<Goal>,
     override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
     override val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>,
     override val id: AgentID = AgentID(),
 ) : Agent<Belief, Goal, Env>,
     AgentActions<Belief, Goal>,
-    GuardScope<Belief>
+    GuardScope<Belief>,
+    SendChannel<Event.Internal> by events
 {
-    private val events: Channel<Event.Internal> = Channel(Channel.UNLIMITED)
-    private val beliefBase: BeliefBase<Belief> = BeliefBase.empty()
-    private lateinit var agentScope: CoroutineScope
 
-    private lateinit var agentContext: CoroutineContext
+    private val log = Logger(
+        Logger.config,
+        "Agent[${id.id}]",
+    )
 
-    private val intentionPool: MutableIntentionPool = MutableIntentionPoolImpl()
+    companion object {
+        private val events = Channel<Event.Internal>(Channel.UNLIMITED)
+    }
 
     override val beliefs: Collection<Belief>
         get() = beliefBase.snapshot()
 
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override fun start(scope: CoroutineScope) {
-        this.agentScope = scope
+    private val beliefBase: BeliefBase<Belief> = BeliefBase.of(this, initialBeliefs)
+    private val intentionPool: MutableIntentionPool = MutableIntentionPoolImpl(this)
 
-        //TODO check that these coroutine goes on without interception..
-        agentScope.launch { beliefBase.collect { events.send(it)} }
-        agentScope.launch { intentionPool.collect { events.send(it)} }
 
-        agentContext = scope.coroutineContext + IntentionInterceptor
-
-        //Now that everything is setup initial Belief and Goals so that the agent can start working
-        beliefBase.addAll(initialBeliefs)
+    init {
         initialGoals.forEach { alsoAchieve(it) }
     }
 
-    override suspend fun step() {
-        println("Waiting for the next event to execute... ")
+    override suspend fun step(scope: CoroutineScope) {
+        log.d { "waiting for event..." }
         val event = events.receive()
-        println("Agent received event: $event")
+        log.d { "received event: $event" }
         when (event) {
             //TODO per rimuovere questo cast dovrei tipare Event.Internal con Belief e Goal (si può fare ma è subottimo?)
-            is Event.Internal.Belief<*> -> handleBeliefEvent(event as Event.Internal.Belief<Belief>)
-            is Event.Internal.Goal<*, *> -> handleGoalEvent(event as Event.Internal.Goal<Goal, Any?>)
+            is Event.Internal.Belief<*> -> scope.handleBeliefEvent(event as Event.Internal.Belief<Belief>)
+            is Event.Internal.Goal<*, *> -> scope.handleGoalEvent(event as Event.Internal.Goal<Goal, Any?>)
             is Event.Internal.Step -> handleStepEvent(event)
         }
     }
 
-    private suspend fun handleBeliefEvent(event: Event.Internal.Belief<Belief>) {
+    /**
+     * Launches plans in the SupervisorScope of the Step.
+     * @param event the belief event that triggered the plan execution.
+     */
+    private suspend fun CoroutineScope.handleBeliefEvent(event: Event.Internal.Belief<Belief>) {
         val relevantPlans = beliefPlans.filter { when (event) {
                 is Event.Internal.Belief.Add<Belief> -> it is Plan.Belief.Addition
                 is Event.Internal.Belief.Remove<Belief> -> it is Plan.Belief.Removal
             } && it.isRelevant(event.belief)
         }
-        //TODO signal that there are no relevant plans? For now throw exception
-        check(relevantPlans.isNotEmpty()) { "No relevant plans for belief event $event" }
 
-        val applicablePlans = relevantPlans.filter { it.isApplicable(this, event.belief) }
-        //TODO signal that there are no applicable plans? For now throw exception
-        check(applicablePlans.isNotEmpty()) { "No applicable plans for belief event $event" }
+        if(relevantPlans.isEmpty()) { log.e {"No relevant plans for belief event $event" } }
+
+        val applicablePlans = relevantPlans.filter { it.isApplicable(this@AgentImpl, event.belief) }
+
+        if(applicablePlans.isEmpty()) { log.e { "No applicable plans for belief event $event"} }
 
         val plan = applicablePlans.first() //TODO support other strategies for selecting the plan to execute
+
+        log.d { "Selected plan $plan" }
 
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
 
         val intention = intentionPool.nextIntention(event)
 
-        // intentionContext.job -> The execution is children of the intention which executes that event
-        // Job is the lifecycle of the coroutine, it manages the cancellation chain.
-        // The plus operations: It automatically replaces the keys in the context of this intention.
-        agentScope.launch(agentContext + intention + intention.job) {
+        launch(IntentionInterceptor + intention + intention.job) {
             try {
+                log.d { "Running plan $plan" }
                 plan.run(this@AgentImpl, this@AgentImpl, environment, event.belief)
             } catch (_: Exception) {
                 handleFailure(event)
             }
         }
+
+        log.d { "Launched plan $plan" }
     }
 
     // TODO(In order to be capable to complete the completion, i had to remove the star projection and put Any?)
     // This requires refactoring of type management
-    private suspend fun handleGoalEvent(event: Event.Internal.Goal<Goal, Any?>) {
+    private suspend fun CoroutineScope.handleGoalEvent(event: Event.Internal.Goal<Goal, Any?>) {
         val relevantPlans = goalPlans.filter { when (event) {
                 is Event.Internal.Goal.Add<Goal, *> -> it is Plan.Goal.Addition
                 is Event.Internal.Goal.Remove<Goal, *> -> it is Plan.Goal.Removal
                 is Event.Internal.Goal.Failed<Goal, *> -> it is Plan.Goal.Failure
         } && it.isRelevant(event.goal)}
 
-        //TODO signal that there are no relevant plans? For now throw exception
-        check(relevantPlans.isNotEmpty()) { "No relevant plans for goal event $event" }
+        if(relevantPlans.isEmpty()) { log.e {"No relevant plans for goal event $event" } }
 
-        val applicablePlans = relevantPlans.filter { it.isApplicable(this, event.goal) }
-        //TODO signal that there are no applicable plans? For now throw exception
-        check(applicablePlans.isNotEmpty()) { "No applicable plans for goal event $event" }
+        val applicablePlans = relevantPlans.filter { it.isApplicable(this@AgentImpl, event.goal) }
+
+        if(applicablePlans.isEmpty()) { log.e { "No applicable plans for goal event $event"} }
 
         val plan = applicablePlans.first() //TODO support other strategies for selecting the plan to execute
+
+        log.d { "Selected plan $plan" }
+
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
         val intention = intentionPool.nextIntention(event)
 
-        agentScope.launch(agentContext + intention + intention.job) {
+        launch(IntentionInterceptor + intention + intention.job) {
             try {
+                log.d { "Running plan $plan" }
                 val result = plan.run(this@AgentImpl, this@AgentImpl, environment, event.goal)
                 event.completion?.complete(result)
             } catch (_: Exception) {
                 handleFailure(event)
             }
         }
+        log.d { "Launched plan $plan" }
     }
 
     private suspend fun handleFailure(event: Event.Internal) {
@@ -146,14 +152,16 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     override suspend fun <PlanResult> _achieve(goal: Goal, resultType: KType): PlanResult {
         val completion = CompletableDeferred<PlanResult>()
         val intention = currentCoroutineContext()[Intention]
+
         check(intention != null) { "Cannot happen that an achieve invocation comes from a null intention." }
-        println("Achieving $goal. Previous intention $intention")
+
+        log.d {"Achieving $goal. Previous intention $intention"}
         events.trySend(GoalAddEvent(goal, resultType, completion, intention))
         return completion.await() // Blocking the continuation
     }
 
     override fun print(message: String) {
-        println("[$id]: $message")
+        log.a { message }
     }
 
     override fun alsoAchieve(goal: Goal) {
@@ -179,11 +187,10 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     override suspend fun terminate() = stop()
 
     override suspend fun stop() {
-        println("Terminating job: " + currentCoroutineContext().job)
-        println("Parent: " + currentCoroutineContext().job.parent?.toString())
-        println("AgentScope job: " +  agentScope.coroutineContext.job)
-
-        agentScope.coroutineContext.job.cancel()
+        //TODO not sure this is ok
+        // Am I killing the MAS?
+        log.d { "Terminating agent" }
+        currentCoroutineContext().job.parent?.parent?.cancel()
     }
 
 }

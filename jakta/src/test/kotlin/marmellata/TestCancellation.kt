@@ -41,9 +41,8 @@ class TestCancellation {
 
         runBlocking {
             val job = launch(EnvironmentContext(TestEnvironment())) {
-                agent.start(this)
                 while (true) {
-                    agent.step()
+                    agent.step(this)
                 }
             }
             launch {

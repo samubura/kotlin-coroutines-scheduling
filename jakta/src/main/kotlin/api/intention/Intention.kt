@@ -1,5 +1,6 @@
 package api.intention
 
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlin.coroutines.Continuation
@@ -49,6 +50,12 @@ internal class IntentionImpl(
     override val job: Job,
     override val continuations: Channel<() -> Unit> = Channel(Channel.UNLIMITED),
 ): Intention {
+
+    private val log = Logger(
+        Logger.config,
+        "Intention[${id.id}]",
+    )
+
     override val key: Key<Intention> = Intention.Key
 
     val observers: MutableList<(Intention) -> Unit> = mutableListOf()
@@ -61,7 +68,7 @@ internal class IntentionImpl(
 
     override fun step() {
         continuations.tryReceive().getOrNull()?.let {
-            println("Execution of one step of the intention.")
+            log.d { "Running one step" }
             it()
         }
     }
@@ -75,9 +82,11 @@ internal class IntentionImpl(
     }
 
     override fun <T> resumeWith(continuation: Continuation<T>, result: Result<T>) {
+        log.d{ "Resumed continuation and notify ready to step" }
         continuations.trySend {
             continuation.resumeWith(result)
         }
         notifyReadyToStep()
+
     }
 }

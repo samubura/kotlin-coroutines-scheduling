@@ -2,26 +2,31 @@ import api.belief.BeliefBase
 import api.event.BeliefAddEvent
 import api.event.BeliefRemoveEvent
 import api.event.Event
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.SendChannel
 
 internal data class BeliefBaseImpl<Belief: Any>(
-    val beliefs: MutableSet<Belief> = mutableSetOf(),
-    val events : MutableSharedFlow<Event.Internal.Belief<Belief>> = MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE), //TODO overflow?
+    private val events : SendChannel<Event.Internal.Belief<Belief>>,
+    val initialBeliefs: Iterable<Belief> = emptyList(),
 ) : BeliefBase<Belief>,
-    MutableSet<Belief> by beliefs,
-    Flow<Event.Internal.Belief<Belief>> by events {
+    MutableSet<Belief> by mutableSetOf()
+{
+    private val beliefs
+        get() = this as MutableSet<Belief>
+
+    init {
+        initialBeliefs.forEach { add(it) } // ✅ triggers event
+    }
 
     override fun snapshot(): Collection<Belief> {
         return this.copy()
     }
 
     override fun add(element: Belief): Boolean = beliefs.add(element).alsoWhenTrue {
-        events.tryEmit(BeliefAddEvent(element))
+        events.trySend(BeliefAddEvent(element))
     }
 
     override fun remove(element: Belief): Boolean = beliefs.remove(element).alsoWhenTrue {
-        events.tryEmit( BeliefRemoveEvent(element))
+        events.trySend( BeliefRemoveEvent(element))
     }
 
     override fun addAll(elements: Collection<Belief>): Boolean {
@@ -52,7 +57,7 @@ internal data class BeliefBaseImpl<Belief: Any>(
 
     override fun clear() {
         beliefs.map { BeliefRemoveEvent(it) }
-            .forEach { events.tryEmit(it) }
+            .forEach { events.trySend(it) }
         beliefs.clear()
 
     }

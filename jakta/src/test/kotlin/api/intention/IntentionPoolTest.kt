@@ -5,6 +5,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -30,7 +32,7 @@ class IntentionPoolTest {
 
     @BeforeEach
     fun init() {
-        intentionPool = MutableIntentionPoolImpl()
+        intentionPool = MutableIntentionPoolImpl(Channel())
         agentJob = SupervisorJob()
         intentionJob = Job(agentJob)
         otherJob = Job(agentJob)

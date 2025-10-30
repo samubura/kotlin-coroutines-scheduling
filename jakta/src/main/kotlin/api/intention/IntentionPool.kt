@@ -1,14 +1,16 @@
 package api.intention
 
 import api.event.Event
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.job
 
-interface IntentionPool : Flow<Event.Internal.Step> {
+interface IntentionPool {
     /**
      * Given an event, it returns the intention to execute it.
      * @return a new intention if the event does not reference any existing intention,
@@ -45,8 +47,14 @@ interface MutableIntentionPool : AddableIntentionPool {
     suspend fun stepIntention(event: Event.Internal.Step): Unit
 }
 
-class MutableIntentionPoolImpl(val events: MutableSharedFlow<Event.Internal.Step> = MutableSharedFlow(extraBufferCapacity = Int.MAX_VALUE))
-    : MutableIntentionPool, Flow<Event.Internal.Step> by events {
+class MutableIntentionPoolImpl(
+    val events: SendChannel<Event.Internal.Step>
+) : MutableIntentionPool {
+
+    private val log = Logger(
+        Logger.config,
+        "IntentionPool", //TODO differentiate between multiple agents e.g. with AgentID
+    )
 
     /** List of intentions currently managed by the agent. **/
     private val intentions: MutableSet<Intention> = mutableSetOf()
@@ -72,7 +80,7 @@ class MutableIntentionPoolImpl(val events: MutableSharedFlow<Event.Internal.Step
         } ?: run {
             val intentionJob = Job(currentCoroutineContext().job)
             val newIntention = Intention(job = intentionJob)
-            newIntention.onReadyToStep { events.tryEmit(Event.Internal.Step(it)) }
+            newIntention.onReadyToStep(::onIntentionReadyToStep)
             //This is removing the intention if for some reason the job is manually completed
             intentionJob.invokeOnCompletion { intentions.remove(newIntention) }
             newIntention
@@ -87,6 +95,11 @@ class MutableIntentionPoolImpl(val events: MutableSharedFlow<Event.Internal.Step
     }
 
     override fun getIntentionsSet(): Set<Intention> = setOf(*intentions.toTypedArray())
+
+    private fun onIntentionReadyToStep(intention: Intention) {
+        log.d { "Intention ${intention.id.id} is ready to step" }
+        events.trySend(Event.Internal.Step(intention))
+    }
 
 }
 
