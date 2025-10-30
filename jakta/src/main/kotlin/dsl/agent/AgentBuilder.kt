@@ -8,10 +8,8 @@ import dsl.JaktaDSL
 import dsl.plan.PlanLibraryBuilder
 import dsl.plan.PlanLibraryBuilderImpl
 
-
 @JaktaDSL
-interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment> {
-
+interface AgentBuilder<Belief : Any, Goal : Any, Env : Environment> {
     fun believes(block: BeliefBuilder<Belief>.() -> Unit)
 
     fun hasInitialGoals(block: GoalBuilder<Goal>.() -> Unit)
@@ -20,7 +18,7 @@ interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment> {
 
     fun addBelief(belief: Belief)
 
-    fun addGoal(goal : Goal)
+    fun addGoal(goal: Goal)
 
     fun addBeliefPlan(plan: Plan.Belief<Belief, Goal, Env, *, *>)
 
@@ -33,10 +31,7 @@ interface AgentBuilder<Belief : Any, Goal : Any, Env: Environment> {
     fun build(): Agent<Belief, Goal, Env>
 }
 
-
-
-class AgentBuilderImpl<Belief : Any, Goal : Any, Env : Environment>() : AgentBuilder<Belief, Goal, Env> {
-
+class AgentBuilderImpl<Belief : Any, Goal : Any, Env : Environment> : AgentBuilder<Belief, Goal, Env> {
     private var initialBeliefs = listOf<Belief>()
     private var initialGoals = listOf<Goal>()
     private var beliefPlans = listOf<Plan.Belief<Belief, Goal, Env, *, *>>()
@@ -57,19 +52,29 @@ class AgentBuilderImpl<Belief : Any, Goal : Any, Env : Environment>() : AgentBui
         builder.apply(block)
     }
 
-    override fun addBelief(belief: Belief) { initialBeliefs += belief }
+    override fun addBelief(belief: Belief) {
+        initialBeliefs += belief
+    }
 
-    override fun addGoal(goal: Goal) { initialGoals += goal }
+    override fun addGoal(goal: Goal) {
+        initialGoals += goal
+    }
 
-    override fun addBeliefPlan(plan: Plan.Belief<Belief, Goal, Env, *, *>) { beliefPlans += plan }
+    override fun addBeliefPlan(plan: Plan.Belief<Belief, Goal, Env, *, *>) {
+        beliefPlans += plan
+    }
 
-    override fun addGoalPlan(plan: Plan.Goal<Belief, Goal, Env, *, *>) { goalPlans += plan }
+    override fun addGoalPlan(plan: Plan.Goal<Belief, Goal, Env, *, *>) {
+        goalPlans += plan
+    }
 
-    override fun withBeliefPlans(vararg plans: Plan.Belief<Belief, Goal, Env, *, *>) { beliefPlans += plans }
+    override fun withBeliefPlans(vararg plans: Plan.Belief<Belief, Goal, Env, *, *>) {
+        beliefPlans += plans
+    }
 
-    override fun withGoalPlans(vararg plans: Plan.Goal<Belief, Goal, Env, *, *>) { goalPlans += plans }
+    override fun withGoalPlans(vararg plans: Plan.Goal<Belief, Goal, Env, *, *>) {
+        goalPlans += plans
+    }
 
     override fun build(): Agent<Belief, Goal, Env> = AgentImpl(initialBeliefs, initialGoals, beliefPlans, goalPlans)
-
 }
-

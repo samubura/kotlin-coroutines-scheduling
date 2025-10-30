@@ -6,12 +6,11 @@ import api.plan.Plan
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 
-
-interface Agent<Belief : Any, Goal: Any,  Env : Environment> : SendChannel<Event.Internal> {
+interface Agent<Belief : Any, Goal : Any, Env : Environment> : SendChannel<Event.Internal> {
     val id: AgentID
     val beliefs: Collection<Belief>
     val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>
-    val goalPlans : List<Plan.Goal<Belief, Goal, Env, *, *>>
+    val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>
 
     /**
      * Runs a step of a reasoning cycle, suspends until an event is available and process it.
@@ -24,5 +23,4 @@ interface Agent<Belief : Any, Goal: Any,  Env : Environment> : SendChannel<Event
      * Stops the agent, cancelling its main Job.
      */
     suspend fun stop()
-
 }

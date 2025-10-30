@@ -12,45 +12,44 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 
 class TestCancellation {
-
     @Test
     fun testAgentCancellation() {
-             val agent = agent {
-                 hasInitialGoals {
-                     !"executeAchievementGoal"
-                 }
-                 hasPlans {
-                     adding.goal {
-                         ifGoalMatch("executeAchievementGoal")
-                     } triggers {
-                         agent.alsoAchieve("loop")
-                         delay(1000)
-                         agent.terminate()
-                     }
+        val agent =
+            agent {
+                hasInitialGoals {
+                    !"executeAchievementGoal"
+                }
+                hasPlans {
+                    adding.goal {
+                        ifGoalMatch("executeAchievementGoal")
+                    } triggers {
+                        agent.alsoAchieve("loop")
+                        delay(1000)
+                        agent.terminate()
+                    }
 
-                     adding.goal {
-                         ifGoalMatch("loop")
-                     } triggers {
-                         println("Executing loop!")
-                         delay(100)
-                         agent.alsoAchieve("loop")
-
-                     }
-                 }
-             }
-
-        runBlocking {
-            val job = launch(EnvironmentContext(TestEnvironment())) {
-                while (true) {
-                    agent.step(this)
+                    adding.goal {
+                        ifGoalMatch("loop")
+                    } triggers {
+                        println("Executing loop!")
+                        delay(100)
+                        agent.alsoAchieve("loop")
+                    }
                 }
             }
+
+        runBlocking {
+            val job =
+                launch(EnvironmentContext(TestEnvironment())) {
+                    while (true) {
+                        agent.step(this)
+                    }
+                }
             launch {
                 delay(1000)
                 job.cancelAndJoin()
                 assert(job.isCancelled)
             }
         }
-
     }
 }

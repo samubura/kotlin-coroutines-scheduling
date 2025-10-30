@@ -1,12 +1,12 @@
 package marmellata
 
 import api.environment.TestEnvironment
-import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
+import ifGoalMatch
 import kotlinx.coroutines.delay
 
-suspend fun main(){
+suspend fun main() {
     mas {
         environment { TestEnvironment() }
         agent {

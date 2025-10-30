@@ -20,15 +20,14 @@ import kotlin.test.assertFails
 import kotlin.test.assertNotEquals
 
 class IntentionPoolTest {
-
     private lateinit var intentionPool: MutableIntentionPool
-    private lateinit var agentJob : Job
-    private lateinit var intentionJob : Job
-    private lateinit var otherJob : Job
+    private lateinit var agentJob: Job
+    private lateinit var intentionJob: Job
+    private lateinit var otherJob: Job
     private lateinit var intention: Intention
     private lateinit var otherIntention: Intention
 
-    private lateinit var newGoalEvent : GoalAddEvent<String, Unit>
+    private lateinit var newGoalEvent: GoalAddEvent<String, Unit>
 
     @BeforeEach
     fun init() {
@@ -38,12 +37,13 @@ class IntentionPoolTest {
         otherJob = Job(agentJob)
         intention = Intention(job = intentionJob)
         otherIntention = Intention(job = otherJob)
-        newGoalEvent = GoalAddEvent(
-            goal = "NewGoal",
-            resultType = typeOf<Unit>(),
-            completion = CompletableDeferred(),
-            intention = null
-        )
+        newGoalEvent =
+            GoalAddEvent(
+                goal = "NewGoal",
+                resultType = typeOf<Unit>(),
+                completion = CompletableDeferred(),
+                intention = null,
+            )
     }
 
     @Test
@@ -79,70 +79,77 @@ class IntentionPoolTest {
         assert(intentionPool.getIntentionsSet().isEmpty()) {
             "The intention pool should be empty after dropping the only intention it contained"
         }
-        assert(intention.job.isCancelled){
+        assert(intention.job.isCancelled) {
             "The job associated to the dropped intention should be cancelled"
         }
-        assert(otherIntention.job.isCancelled.not()){
+        assert(otherIntention.job.isCancelled.not()) {
             "The job associated to an intention that has not been dropped should not be cancelled"
         }
-        assert(agentJob.isCancelled.not()){
+        assert(agentJob.isCancelled.not()) {
             "The job associated to the agent should not be cancelled when dropping an intention"
         }
     }
 
     @Test
-    fun testNextIntentionWithNewGoal(){
+    fun testNextIntentionWithNewGoal() {
         runTest {
             launch(agentJob) {
                 assertEquals(
-                    agentJob, currentCoroutineContext().job.parent,
-                    "The coroutine context job's parent should be the agent job"
+                    agentJob,
+                    currentCoroutineContext().job.parent,
+                    "The coroutine context job's parent should be the agent job",
                 )
 
                 val nextIntention = intentionPool.nextIntention(newGoalEvent)
                 assertContains(
-                    agentJob.children, nextIntention.job.parent,
-                    "The intention job's parent should be a children of the agent job"
+                    agentJob.children,
+                    nextIntention.job.parent,
+                    "The intention job's parent should be a children of the agent job",
                 )
 
                 val otherNext = intentionPool.nextIntention(newGoalEvent)
                 assertContains(
-                    agentJob.children, otherNext.job.parent,
-                    "The other intention job's parent should be a children of the agent job"
+                    agentJob.children,
+                    otherNext.job.parent,
+                    "The other intention job's parent should be a children of the agent job",
                 )
                 assertNotEquals(
-                    nextIntention.job, otherNext.job,
-                    "Two different intentions should not have the same job"
+                    nextIntention.job,
+                    otherNext.job,
+                    "Two different intentions should not have the same job",
                 )
                 assertEquals(
-                    nextIntention.job.parent, otherNext.job.parent,
-                    "But they should have the same parent job"
+                    nextIntention.job.parent,
+                    otherNext.job.parent,
+                    "But they should have the same parent job",
                 )
             }
         }
     }
 
     @Test
-    fun testNextIntentionWithExistingIntention(){
+    fun testNextIntentionWithExistingIntention() {
         testInsertion()
         val subGoalEvent = newGoalEvent.copy(intention = intention)
         runTest {
             launch(agentJob) {
-                val nextIntention = intentionPool.nextIntention(
-                    subGoalEvent
+                val nextIntention =
+                    intentionPool.nextIntention(
+                        subGoalEvent,
+                    )
+                assertEquals(
+                    intention,
+                    nextIntention,
+                    "The intention returned by nextIntention() should be the same as the one referenced by the event",
                 )
                 assertEquals(
-                    intention, nextIntention,
-                    "The intention returned by nextIntention() should be the same as the one referenced by the event"
-                )
-                assertEquals(
-                    intention.job, nextIntention.job,
-                    "The job of the intention returned by nextIntention() should be the same as the one referenced by the event"
+                    intention.job,
+                    nextIntention.job,
+                    "The job of the intention returned by nextIntention() should be the same as the one referenced by the event",
                 )
             }
         }
     }
-
 
     @Test
     fun testCancellingIntentions() {
@@ -169,5 +176,4 @@ class IntentionPoolTest {
             }
         }
     }
-
 }

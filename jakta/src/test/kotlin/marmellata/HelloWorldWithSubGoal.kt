@@ -2,11 +2,11 @@ package marmellata
 
 import api.agent.achieve
 import api.environment.TestEnvironment
-import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
+import ifGoalMatch
 
-suspend fun main(){
+suspend fun main() {
     mas {
         environment { TestEnvironment() }
         agent {
@@ -23,7 +23,7 @@ suspend fun main(){
                     agent.terminate()
                 }
 
-                adding.goal{
+                adding.goal {
                     ifGoalMatch("subGoal1")
                 } triggers {
                     agent.print("SubGoal!")

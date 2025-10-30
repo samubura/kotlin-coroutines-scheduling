@@ -6,17 +6,19 @@ import co.touchlab.kermit.Severity
 import dsl.mas
 import dsl.plan.triggers
 
-suspend fun main(){
-
+suspend fun main() {
     Logger.setMinSeverity(Severity.Verbose)
 
-    data class goal(val goalID: String, val param: String)
+    data class Goal(
+        val goalID: String,
+        val param: String,
+    )
 
     mas {
         environment { TestEnvironment() }
         agent {
             hasInitialGoals {
-                !goal("hello", "Jakta")
+                !Goal("hello", "Jakta")
             }
             hasPlans {
                 adding.goal {

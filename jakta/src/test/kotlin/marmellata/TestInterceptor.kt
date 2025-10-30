@@ -9,15 +9,12 @@ import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 
 class TestInterceptor {
-
     object CustomInterceptor : ContinuationInterceptor {
-
         override val key: CoroutineContext.Key<*>
             get() = ContinuationInterceptor.Key
 
-
-        override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
-            return object : Continuation<T> {
+        override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> =
+            object : Continuation<T> {
                 override val context: CoroutineContext = continuation.context
 
                 override fun resumeWith(result: Result<T>) {
@@ -25,19 +22,17 @@ class TestInterceptor {
                     continuation.resumeWith(result)
                 }
             }
-        }
-
     }
 
-
     @Test
-    fun testMinimal(){
+    fun testMinimal() {
         runTest {
-            val job = launch(CustomInterceptor) {
-                println("Hello...")
-                delay(3000)
-                println("World!")
-            }
+            val job =
+                launch(CustomInterceptor) {
+                    println("Hello...")
+                    delay(3000)
+                    println("World!")
+                }
             job.join()
         }
     }

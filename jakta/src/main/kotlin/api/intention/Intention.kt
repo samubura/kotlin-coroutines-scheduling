@@ -8,14 +8,14 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.CoroutineContext.Key
 
 sealed interface Intention : CoroutineContext.Element {
-    val id : IntentionID
+    val id: IntentionID
 
     /**
      * Parent of all the chain of sub-executions of continuations.
      * If one child exits, the failure can be detected by the parent.
      * If parent dies, all children die too.
      */
-    val job : Job
+    val job: Job
 
     /**
      * The channel for executing intentions, allows for round-robin fair execution of intentions.
@@ -36,7 +36,7 @@ sealed interface Intention : CoroutineContext.Element {
     companion object Key : CoroutineContext.Key<Intention> {
         operator fun invoke(
             id: IntentionID = IntentionID(),
-            job : Job,
+            job: Job,
             continuations: Channel<() -> Unit> = Channel(Channel.UNLIMITED),
         ): Intention = IntentionImpl(id, job, continuations)
     }
@@ -46,20 +46,18 @@ internal data class IntentionImpl(
     override val id: IntentionID = IntentionID(),
     override val job: Job,
     override val continuations: Channel<() -> Unit> = Channel(Channel.UNLIMITED),
-): Intention {
-
-    private val log = Logger(
-        Logger.config,
-        "Intention[${id.id}]",
-    )
+) : Intention {
+    private val log =
+        Logger(
+            Logger.config,
+            "Intention[${id.id}]",
+        )
 
     override val key: Key<Intention> = Intention.Key
 
     val observers: MutableList<(Intention) -> Unit> = mutableListOf()
 
-    override fun equals(other: Any?): Boolean {
-        return (other is Intention && id == other.id)
-    }
+    override fun equals(other: Any?): Boolean = (other is Intention && id == other.id)
 
     override fun hashCode(): Int = id.hashCode()
 
@@ -79,7 +77,7 @@ internal data class IntentionImpl(
     }
 
     override fun enqueue(continuation: () -> Unit) {
-        log.d{ "Resumed continuation and notify ready to step" }
+        log.d { "Resumed continuation and notify ready to step" }
         continuations.trySend(continuation)
         notifyReadyToStep()
     }

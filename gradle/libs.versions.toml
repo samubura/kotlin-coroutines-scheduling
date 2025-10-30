@@ -1,0 +1,18 @@
+[versions]
+kotest = "6.0.4"
+kotlin = "2.2.21"
+dokka = "2.1.0"
+
+
+[libraries]
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-assertions-table = { module = "io.kotest:kotest-assertions-table", version.ref = "kotest" }
+kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+
+[plugins]
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotest = { id = "io.kotest", version.ref = "kotest" }
+kotlin-qa = "org.danilopianini.gradle-kotlin-qa:0.95.3"

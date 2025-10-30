@@ -2,16 +2,17 @@ package marmellata
 
 import api.agent.achieve
 import api.environment.TestEnvironment
-import ifGoalMatch
 import dsl.BeliefPlan
 import dsl.agent
 import dsl.mas
 import dsl.plan.triggers // TODO maybe not great that we have to import?
+import ifGoalMatch
 
 suspend fun main() {
-    val p = BeliefPlan.of<String, Int, TestEnvironment> {
-        removing.belief { listOf(1,2,3) } triggers { println("triggered")}
-    }
+    val p =
+        BeliefPlan.of<String, Int, TestEnvironment> {
+            removing.belief { listOf(1, 2, 3) } triggers { println("triggered") }
+        }
     val bob = agent<String, Int, TestEnvironment> { withBeliefPlans(p) }
 
     mas {
@@ -22,8 +23,6 @@ suspend fun main() {
         withAgents(bob)
 
         agent {
-
-
             believes {
                 +"pippo"
                 +"pluto"
@@ -49,7 +48,8 @@ suspend fun main() {
                 } triggers {
                     val x = context + 10
                     environment.test()
-                    val result: String = agent.achieve(23) // Filtering plans on the return type of execution. Requires generic type reification.
+                    val result: String = agent.achieve(23)
+                    // Filtering plans on the return type of execution. Requires generic type reification.
                     result
                 }
             }
