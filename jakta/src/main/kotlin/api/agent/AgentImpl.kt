@@ -5,6 +5,7 @@ import api.environment.Environment
 import api.environment.EnvironmentContext
 import api.event.Event
 import api.event.GoalAddEvent
+import api.event.GoalFailedEvent
 import api.intention.Intention
 import api.intention.IntentionInterceptor
 import api.intention.MutableIntentionPool
@@ -54,7 +55,8 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         val event = events.receive()
         log.i { "received event: $event" }
         when (event) {
-            // TODO per rimuovere questo cast dovrei tipare Event.Internal con Belief e Goal (si può fare ma è subottimo?)
+            // TODO per rimuovere questo cast dovrei tipare Event.Internal
+            //  con Belief e Goal (si può fare ma è subottimo?)
             is Event.Internal.Belief<*> -> scope.handleBeliefEvent(event as Event.Internal.Belief<Belief>)
             is Event.Internal.Goal<*, *> -> scope.handleGoalEvent(event as Event.Internal.Goal<Goal, Any?>)
             is Event.Internal.Step -> handleStepEvent(event)
@@ -66,54 +68,55 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
      * @param event the belief event that triggered the plan execution.
      */
     private suspend fun CoroutineScope.handleBeliefEvent(event: Event.Internal.Belief<Belief>) {
-        val plan =
-            selectPlan(
-                entity = event.belief,
-                entityMessage = "belief",
-                planList = beliefPlans,
-                relevantFilter = {
-                    when (event) {
-                        is Event.Internal.Belief.Add<Belief> -> it is Plan.Belief.Addition
-                        is Event.Internal.Belief.Remove<Belief> -> it is Plan.Belief.Removal
-                    } && it.isRelevant(event.belief)
-                },
-                applicableFilter = {
-                    it.isApplicable(this@AgentImpl, event.belief)
-                },
-            ) ?: run {
-                log.e { "No plan selected for belief event $event" }
-                handleFailure(event, IllegalArgumentException("No plan selected for belief event $event"))
-                return
-            }
-
-        launchPlan(event, event.belief, plan)
+        selectPlan(
+            entity = event.belief,
+            entityMessage = when(event) {
+                is Event.Internal.Belief.Add<Belief> -> "addition of belief"
+                is Event.Internal.Belief.Remove<Belief> -> "removal of belief"
+            },
+            planList = beliefPlans,
+            relevantFilter = {
+                when (event) {
+                    is Event.Internal.Belief.Add<Belief> -> it is Plan.Belief.Addition
+                    is Event.Internal.Belief.Remove<Belief> -> it is Plan.Belief.Removal
+                } && it.isRelevant(event.belief)
+            },
+            applicableFilter = {
+                it.isApplicable(this@AgentImpl, event.belief)
+            },
+        )?.let {
+            launchPlan(event, event.belief, it)
+        } ?: run {
+            handleFailure(event, Exception("No plan found for $event"))
+        }
     }
 
     // TODO In order to be capable to complete the completion, i had to remove the star projection and put Any?
     //  This requires refactoring of type management
     private suspend fun CoroutineScope.handleGoalEvent(event: Event.Internal.Goal<Goal, Any?>) {
-        val plan =
-            selectPlan(
-                entity = event.goal,
-                entityMessage = "goal",
-                planList = goalPlans,
-                relevantFilter = {
-                    when (event) {
-                        is Event.Internal.Goal.Add<Goal, *> -> it is Plan.Goal.Addition
-                        is Event.Internal.Goal.Remove<Goal, *> -> it is Plan.Goal.Removal
-                        is Event.Internal.Goal.Failed<Goal, *> -> it is Plan.Goal.Failure
-                    } && it.isRelevant(event.goal)
-                },
-                applicableFilter = {
-                    it.isApplicable(this@AgentImpl, event.goal)
-                },
-            ) ?: run {
-                log.e { "No plan selected for goal event $event" }
-                handleFailure(event, IllegalArgumentException("No plan selected for goal event $event"))
-                return
-            }
-
-        launchPlan(event, event.goal, plan, event.completion)
+        selectPlan(
+            entity = event.goal,
+            entityMessage = when(event) {
+                is Event.Internal.Goal.Add<Goal, *> -> "addition of goal"
+                is Event.Internal.Goal.Remove<Goal, *> -> "removal of goal"
+                is Event.Internal.Goal.Failed<Goal, *> -> "failure of goal"
+            },
+            planList = goalPlans,
+            relevantFilter = {
+                when (event) {
+                    is Event.Internal.Goal.Add<Goal, *> -> it is Plan.Goal.Addition
+                    is Event.Internal.Goal.Remove<Goal, *> -> it is Plan.Goal.Removal
+                    is Event.Internal.Goal.Failed<Goal, *> -> it is Plan.Goal.Failure
+                } && it.isRelevant(event.goal)
+            },
+            applicableFilter = {
+                it.isApplicable(this@AgentImpl, event.goal)
+            },
+        )?.let {
+            launchPlan(event, event.goal, it, event.completion)
+        } ?: run {
+            handleFailure(event, Exception("No plan found for ${event}"))
+        }
     }
 
     private suspend fun <TriggerEntity : Any> CoroutineScope.launchPlan(
@@ -148,26 +151,37 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         val relevant = planList.filter(relevantFilter)
 
         if (relevant.isEmpty()) {
-            log.e { "No relevant plans for $entityMessage: $entity" }
+            log.w { "No relevant plans for $entityMessage: $entity" }
         }
 
         val applicable = relevant.filter(applicableFilter)
 
         if (applicable.isEmpty()) {
-            log.e { "No applicable plans for $entityMessage: $entity" }
+            log.w { "No applicable plans for $entityMessage: $entity" }
         }
 
         return applicable.firstOrNull()?.let {
             log.d { "Selected plan $it for $entityMessage: $entity" }
             it
+        } ?: run {
+            log.w { "No plan selected for $entityMessage: $entity" }
+            null
         }
     }
 
-    private suspend fun handleFailure(
+    //TODO check if this is enough
+    // what happens if a belief plan fails?
+    private fun handleFailure(
         event: Event.Internal,
         e: Exception,
     ) {
-        log.e { "Plan execution failed for event $event with exception: ${e.message}" }
+        when (event) {
+            is Event.Internal.Goal.Add<*, *> -> {
+                log.w { "Attempting to handle the failure of goal: $event.goal" }
+                events.trySend(GoalFailedEvent(event.goal, event.completion, event.intention, event.resultType))
+            }
+            else -> log.e { "Handling of event $event failed with exception: ${e.message}" }
+        }
     }
 
     // TODO(Missing implementation for greedy event selection in case Step.intention was removed from intention pool)
@@ -199,20 +213,23 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         events.trySend(GoalAddEvent.withNoResult(goal))
     }
 
-    override fun fail() {
-        TODO("Not yet implemented")
+    override fun fail(reason: String) {
+        throw RuntimeException("Plan failed intentionally with reason: $reason")
     }
 
-    override fun succeed() {
-        TODO("Not yet implemented")
+    override fun <T> succeed(result: T) {
+        //to implement the succeed action we need to have a reference to the current plan completion
+        // to complete it successfully with the appropriate result
+        TODO()
     }
 
     override suspend fun believe(belief: Belief) {
-        TODO("Not yet implemented")
+        this.beliefBase.add(belief)
     }
 
+    //TODO should I have also update belief?
     override suspend fun forget(belief: Belief) {
-        TODO("Not yet implemented")
+        this.beliefBase.remove(belief)
     }
 
     override suspend fun terminate() = stop()

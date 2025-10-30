@@ -29,12 +29,12 @@ interface AgentActions<Belief : Any, Goal : Any> {
     /**
      * Forcefully fail the current plan being pursued.
      */
-    fun fail()
+    fun fail(reason: String)
 
     /**
      * Forcefully fail the current plan being pursued.
      */
-    fun succeed()
+    fun <T> succeed(result: T)
 
     /** Terminates the execution of the agent **/
     suspend fun terminate()

@@ -3,46 +3,46 @@ package examples
 import api.environment.TestEnvironment
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
+import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
-import ifGoalMatch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class TestHelloWorld {
-    val helloWorld =
-        mas {
-            environment { TestEnvironment() }
-            agent {
-                hasInitialGoals {
-                    !"goal"
-                }
-                hasPlans {
-                    adding.goal {
-                        ifGoalMatch("goal")
-                    } triggers {
-                        agent.print("Hello World!")
-                        agent.terminate()
-                    }
+
+    val helloWorld = mas {
+        environment { TestEnvironment() }
+        agent {
+            hasInitialGoals {
+                !"goal"
+            }
+            hasPlans {
+                adding.goal {
+                    ifGoalMatch("goal")
+                } triggers {
+                    agent.print("Hello World!")
+                    agent.terminate()
                 }
             }
         }
+    }
 
     @BeforeEach
-    fun setup() {
+    fun setup(){
         Logger.setMinSeverity(Severity.Error)
     }
 
     @Test
-    fun testHello() {
+    fun testHello(){
         runTest {
-            val job =
-                launch {
-                    helloWorld.run()
-                }
+            val job = launch {
+                helloWorld.run()
+            }
             job.join()
         }
     }
+
 }

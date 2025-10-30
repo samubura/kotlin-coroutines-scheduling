@@ -7,10 +7,9 @@ import kotlinx.coroutines.channels.SendChannel
 internal data class BeliefBaseImpl<Belief : Any>(
     private val events: SendChannel<Event.Internal.Belief<Belief>>,
     val initialBeliefs: Iterable<Belief> = emptyList(),
+    private val beliefs: MutableSet<Belief> = mutableSetOf()
 ) : BeliefBase<Belief>,
-    MutableSet<Belief> by mutableSetOf() {
-    private val beliefs
-        get() = this as MutableSet<Belief>
+    MutableSet<Belief> by beliefs {
 
     init {
         initialBeliefs.forEach { add(it) } // ✅ triggers event
