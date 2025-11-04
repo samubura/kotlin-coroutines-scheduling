@@ -39,11 +39,9 @@ internal data class BeliefBaseImpl<Belief : Any>(
         .run { beliefs.clear() }
 
     companion object {
-        private fun Boolean.alsoWhenTrue(body: () -> Unit): Boolean = if (this) {
-            body()
-            true
-        } else {
-            false
+        private fun Boolean.alsoWhenTrue(action: () -> Unit): Boolean {
+            if (this) action()
+            return this
         }
     }
 }
