@@ -7,20 +7,20 @@ import api.event.Event
 import api.event.GoalAddEvent
 import api.event.GoalFailedEvent
 import api.intention.Intention
-import api.intention.IntentionDispatcher
+import api.intention.IntentionInterceptor
 import api.intention.MutableIntentionPool
 import api.intention.MutableIntentionPoolImpl
 import api.plan.GuardScope
 import api.plan.Plan
 import co.touchlab.kermit.Logger
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlin.coroutines.ContinuationInterceptor
 import kotlin.reflect.KType
 
 open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
@@ -129,7 +129,9 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
         val intention = intentionPool.nextIntention(event)
 
-        launch(IntentionDispatcher + intention + intention.job) {
+        val interceptor = currentCoroutineContext()[ContinuationInterceptor]?: error{ "No ContinuationInterceptor in context"}
+
+        launch(IntentionInterceptor(interceptor) + intention + intention.job) {
             try {
                 log.d { "Running plan $plan" }
                 val result = plan.run(this@AgentImpl, this@AgentImpl, environment, entity)

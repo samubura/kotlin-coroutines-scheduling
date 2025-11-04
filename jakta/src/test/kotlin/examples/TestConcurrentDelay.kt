@@ -18,13 +18,14 @@ import org.junit.jupiter.api.Test
 import kotlin.coroutines.coroutineContext
 import kotlin.test.assertEquals
 
-class TestHelloDelay {
+class TestConcurrentDelay {
     val helloWorld =
         mas {
             environment { TestEnvironment() }
             agent {
                 hasInitialGoals {
                     !"goal"
+                    !"anotherGoal"
                 }
                 hasPlans {
                     adding.goal {
@@ -35,13 +36,21 @@ class TestHelloDelay {
                         agent.print("...World!")
                         agent.terminate()
                     }
+                    adding.goal {
+                        ifGoalMatch("anotherGoal")
+                    } triggers {
+                        delay(1000)
+                        agent.print("Running while waiting...")
+                        delay(5000)
+                        agent.print("I'm still faster!")
+                    }
                 }
             }
         }
 
     @BeforeEach
     fun setup() {
-        Logger.setMinSeverity(Severity.Debug)
+        Logger.setMinSeverity(Severity.Error)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

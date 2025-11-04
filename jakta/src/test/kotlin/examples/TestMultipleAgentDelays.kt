@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test
 import kotlin.coroutines.coroutineContext
 import kotlin.test.assertEquals
 
-class TestHelloDelay {
+class TestMultipleAgentDelays {
     val helloWorld =
         mas {
             environment { TestEnvironment() }
@@ -37,11 +37,26 @@ class TestHelloDelay {
                     }
                 }
             }
+            agent {
+                hasInitialGoals {
+                    !"goal"
+                }
+                hasPlans {
+                    adding.goal {
+                        ifGoalMatch("goal")
+                    } triggers {
+                        agent.print("I will be faster...")
+                        delay(5000)
+                        agent.print("...than you!")
+                        agent.terminate()
+                    }
+                }
+            }
         }
 
     @BeforeEach
     fun setup() {
-        Logger.setMinSeverity(Severity.Debug)
+        Logger.setMinSeverity(Severity.Error)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
