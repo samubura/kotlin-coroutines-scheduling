@@ -211,14 +211,6 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         events.trySend(GoalAddEvent.withNoResult(goal))
     }
 
-    override fun fail(reason: String): Unit = throw RuntimeException("Plan failed intentionally with reason: $reason")
-
-    override fun <T> succeed(result: T) {
-        // to implement the succeed action we need to have a reference to the current plan completion
-        // to complete it successfully with the appropriate result
-        TODO()
-    }
-
     override suspend fun believe(belief: Belief) {
         this.beliefBase.add(belief)
     }
