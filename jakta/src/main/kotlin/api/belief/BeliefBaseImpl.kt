@@ -25,38 +25,18 @@ internal data class BeliefBaseImpl<Belief : Any>(
         events.trySend(BeliefRemoveEvent(element))
     }
 
-    override fun addAll(elements: Collection<Belief>): Boolean {
-        var result = false
-        for (belief in elements) {
-            result = add(belief) || result
-        }
-        return result
-    }
+    override fun addAll(elements: Collection<Belief>): Boolean = elements.map{ add(it) }.any { it }
 
-    override fun removeAll(elements: Collection<Belief>): Boolean {
-        var result = false
-        for (belief in elements) {
-            result = remove(belief) || result
-        }
-        return result
-    }
+    override fun removeAll(elements: Collection<Belief>): Boolean = elements.map{ remove(it) }.any{ it }
 
-    override fun retainAll(elements: Collection<Belief>): Boolean {
-        var result = false
-        for (belief in beliefs) {
-            if (belief !in elements) {
-                result = remove(belief) || result
-            }
-        }
-        return result
-    }
 
-    override fun clear() {
-        beliefs
-            .map { BeliefRemoveEvent(it) }
-            .forEach { events.trySend(it) }
-        beliefs.clear()
-    }
+    override fun retainAll(elements: Collection<Belief>): Boolean = beliefs.filter { it !in elements }
+        .map { remove(it) }
+        .any { it }
+
+    override fun clear() = beliefs.map { BeliefRemoveEvent(it) }
+        .forEach { events.trySend(it) }
+        .run { beliefs.clear() }
 
     companion object {
         private fun Boolean.alsoWhenTrue(body: () -> Unit): Boolean = if (this) {
