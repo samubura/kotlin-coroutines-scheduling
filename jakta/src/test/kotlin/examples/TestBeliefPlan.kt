@@ -20,8 +20,8 @@ class TestBeliefPlan {
                     +"testBelief"
                 }
                 hasPlans {
-                    adding.belief{
-                        this.takeIf{ it == "testBelief" }
+                    adding.belief {
+                        this.takeIf { it == "testBelief" }
                     } triggers {
                         agent.print("Belief added: $context")
                         agent.terminate()

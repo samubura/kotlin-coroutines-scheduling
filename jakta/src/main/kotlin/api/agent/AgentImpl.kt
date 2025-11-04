@@ -7,7 +7,7 @@ import api.event.Event
 import api.event.GoalAddEvent
 import api.event.GoalFailedEvent
 import api.intention.Intention
-import api.intention.IntentionInterceptor
+import api.intention.IntentionDispatcher
 import api.intention.MutableIntentionPool
 import api.intention.MutableIntentionPoolImpl
 import api.plan.GuardScope
@@ -70,7 +70,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     private suspend fun CoroutineScope.handleBeliefEvent(event: Event.Internal.Belief<Belief>) {
         selectPlan(
             entity = event.belief,
-            entityMessage = when(event) {
+            entityMessage = when (event) {
                 is Event.Internal.Belief.Add<Belief> -> "addition of belief"
                 is Event.Internal.Belief.Remove<Belief> -> "removal of belief"
             },
@@ -96,7 +96,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     private suspend fun CoroutineScope.handleGoalEvent(event: Event.Internal.Goal<Goal, Any?>) {
         selectPlan(
             entity = event.goal,
-            entityMessage = when(event) {
+            entityMessage = when (event) {
                 is Event.Internal.Goal.Add<Goal, *> -> "addition of goal"
                 is Event.Internal.Goal.Remove<Goal, *> -> "removal of goal"
                 is Event.Internal.Goal.Failed<Goal, *> -> "failure of goal"
@@ -115,7 +115,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         )?.let {
             launchPlan(event, event.goal, it, event.completion)
         } ?: run {
-            handleFailure(event, Exception("No plan found for ${event}"))
+            handleFailure(event, Exception("No plan found for $event"))
         }
     }
 
@@ -129,7 +129,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         val environment: Env = currentCoroutineContext()[EnvironmentContext]?.environment as Env
         val intention = intentionPool.nextIntention(event)
 
-        launch(IntentionInterceptor + intention + intention.job) {
+        launch(IntentionDispatcher + intention + intention.job) {
             try {
                 log.d { "Running plan $plan" }
                 val result = plan.run(this@AgentImpl, this@AgentImpl, environment, entity)
@@ -169,12 +169,9 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         }
     }
 
-    //TODO check if this is enough
+    // TODO check if this is enough
     // what happens if a belief plan fails?
-    private fun handleFailure(
-        event: Event.Internal,
-        e: Exception,
-    ) {
+    private fun handleFailure(event: Event.Internal, e: Exception) {
         when (event) {
             is Event.Internal.Goal.Add<*, *> -> {
                 log.w { "Attempting to handle the failure of goal: $event.goal" }
@@ -191,10 +188,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     }
 
     @Deprecated("Use achieve instead", replaceWith = ReplaceWith("achieve(goal)"), level = DeprecationLevel.ERROR)
-    override suspend fun <PlanResult> internalAchieve(
-        goal: Goal,
-        resultType: KType,
-    ): PlanResult {
+    override suspend fun <PlanResult> internalAchieve(goal: Goal, resultType: KType): PlanResult {
         val completion = CompletableDeferred<PlanResult>()
         val intention = currentCoroutineContext()[Intention]
 
@@ -213,12 +207,10 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         events.trySend(GoalAddEvent.withNoResult(goal))
     }
 
-    override fun fail(reason: String) {
-        throw RuntimeException("Plan failed intentionally with reason: $reason")
-    }
+    override fun fail(reason: String): Unit = throw RuntimeException("Plan failed intentionally with reason: $reason")
 
     override fun <T> succeed(result: T) {
-        //to implement the succeed action we need to have a reference to the current plan completion
+        // to implement the succeed action we need to have a reference to the current plan completion
         // to complete it successfully with the appropriate result
         TODO()
     }
@@ -227,7 +219,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
         this.beliefBase.add(belief)
     }
 
-    //TODO should I have also update belief?
+    // TODO should I have also update belief?
     override suspend fun forget(belief: Belief) {
         this.beliefBase.remove(belief)
     }

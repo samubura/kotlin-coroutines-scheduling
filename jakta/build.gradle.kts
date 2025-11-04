@@ -1,3 +1,5 @@
+//import io.gitlab.arturbosch.detekt.Detekt
+
 plugins {
     kotlin("jvm")
     //alias(libs.plugins.kotlin.qa)
@@ -25,3 +27,7 @@ tasks.test {
 kotlin {
     jvmToolchain(21)
 }
+
+//tasks.withType<Detekt>().configureEach {
+//    enabled = false
+//}

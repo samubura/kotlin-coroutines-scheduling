@@ -7,7 +7,7 @@ import kotlinx.coroutines.channels.SendChannel
 internal data class BeliefBaseImpl<Belief : Any>(
     private val events: SendChannel<Event.Internal.Belief<Belief>>,
     val initialBeliefs: Iterable<Belief> = emptyList(),
-    private val beliefs: MutableSet<Belief> = mutableSetOf()
+    private val beliefs: MutableSet<Belief> = mutableSetOf(),
 ) : BeliefBase<Belief>,
     MutableSet<Belief> by beliefs {
 
@@ -17,15 +17,13 @@ internal data class BeliefBaseImpl<Belief : Any>(
 
     override fun snapshot(): Collection<Belief> = this.copy()
 
-    override fun add(element: Belief): Boolean =
-        beliefs.add(element).alsoWhenTrue {
-            events.trySend(BeliefAddEvent(element))
-        }
+    override fun add(element: Belief): Boolean = beliefs.add(element).alsoWhenTrue {
+        events.trySend(BeliefAddEvent(element))
+    }
 
-    override fun remove(element: Belief): Boolean =
-        beliefs.remove(element).alsoWhenTrue {
-            events.trySend(BeliefRemoveEvent(element))
-        }
+    override fun remove(element: Belief): Boolean = beliefs.remove(element).alsoWhenTrue {
+        events.trySend(BeliefRemoveEvent(element))
+    }
 
     override fun addAll(elements: Collection<Belief>): Boolean {
         var result = false
@@ -61,12 +59,11 @@ internal data class BeliefBaseImpl<Belief : Any>(
     }
 
     companion object {
-        private fun Boolean.alsoWhenTrue(body: () -> Unit): Boolean =
-            if (this) {
-                body()
-                true
-            } else {
-                false
-            }
+        private fun Boolean.alsoWhenTrue(body: () -> Unit): Boolean = if (this) {
+            body()
+            true
+        } else {
+            false
+        }
     }
 }

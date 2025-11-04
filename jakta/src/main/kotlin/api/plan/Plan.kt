@@ -14,18 +14,11 @@ sealed interface Plan<Belief : Any, Goal : Any, Env : Environment, TriggerEntity
     val body: suspend (PlanScope<Belief, Goal, Env, Context>) -> PlanResult
     val resultType: KType
 
-    fun isRelevant(
-        e: TriggerEntity,
-        desiredResult: KType = typeOf<Any>(),
-    ): Boolean =
+    fun isRelevant(e: TriggerEntity, desiredResult: KType = typeOf<Any>()): Boolean =
         resultType.isSubtypeOf(desiredResult) &&
             this.trigger(e) != null
 
-    fun isApplicable(
-        guardScope: GuardScope<Belief>,
-        e: TriggerEntity,
-        desiredResult: KType = typeOf<Any>(),
-    ): Boolean =
+    fun isApplicable(guardScope: GuardScope<Belief>, e: TriggerEntity, desiredResult: KType = typeOf<Any>()): Boolean =
         resultType.isSubtypeOf(desiredResult) &&
             trigger(e)?.let { guard(guardScope, it) != null } ?: false
 
@@ -35,13 +28,9 @@ sealed interface Plan<Belief : Any, Goal : Any, Env : Environment, TriggerEntity
      * this implies that this plan has a valid context that can be executed.
      * If this is not the case, an [IllegalStateException] is thrown.
      */
-    private fun getPlanContext(
-        guardScope: GuardScope<Belief>,
-        e: TriggerEntity,
-    ): Context =
-        trigger(e)?.also {
-            guard(guardScope, it)
-        } ?: throw IllegalStateException("Execution not possible without a plan context")
+    private fun getPlanContext(guardScope: GuardScope<Belief>, e: TriggerEntity): Context = trigger(e)?.also {
+        guard(guardScope, it)
+    } ?: throw IllegalStateException("Execution not possible without a plan context")
 
     suspend fun run(
         agent: AgentActions<Belief, Goal>,
@@ -66,8 +55,10 @@ sealed interface Plan<Belief : Any, Goal : Any, Env : Environment, TriggerEntity
         interface Addition<B : Any, G : Any, Env : Environment, Context : Any, PlanResult> :
             Goal<B, G, Env, Context, PlanResult>
 
-        interface Removal<B : Any, G : Any, Env : Environment, Context : Any, PlanResult> : Goal<B, G, Env, Context, PlanResult>
+        interface Removal<B : Any, G : Any, Env : Environment, Context : Any, PlanResult> :
+            Goal<B, G, Env, Context, PlanResult>
 
-        interface Failure<B : Any, G : Any, Env : Environment, Context : Any, PlanResult> : Goal<B, G, Env, Context, PlanResult>
+        interface Failure<B : Any, G : Any, Env : Environment, Context : Any, PlanResult> :
+            Goal<B, G, Env, Context, PlanResult>
     }
 }

@@ -13,14 +13,18 @@ import dsl.plan.TriggerAdditionImpl
 import dsl.plan.TriggerRemovalImpl
 
 @JaktaDSL
-fun <Belief : Any, Goal : Any, Env : Environment> mas(block: MasBuilder<Belief, Goal, Env>.() -> Unit): MAS<Belief, Goal, Env> {
+fun <Belief : Any, Goal : Any, Env : Environment> mas(
+    block: MasBuilder<Belief, Goal, Env>.() -> Unit,
+): MAS<Belief, Goal, Env> {
     val mb = MasBuilderImpl<Belief, Goal, Env>()
     mb.apply(block)
     return mb.build()
 }
 
 @JaktaDSL
-fun <Belief : Any, Goal : Any, Env : Environment> agent(block: AgentBuilder<Belief, Goal, Env>.() -> Unit): Agent<Belief, Goal, Env> {
+fun <Belief : Any, Goal : Any, Env : Environment> agent(
+    block: AgentBuilder<Belief, Goal, Env>.() -> Unit,
+): Agent<Belief, Goal, Env> {
     val ab = AgentBuilderImpl<Belief, Goal, Env>()
     ab.apply(block)
     return ab.build()
@@ -35,11 +39,15 @@ fun <Belief : Any, Goal : Any, Env : Environment> agent(block: AgentBuilder<Beli
 
 // TODO maybe actually make the triggerBuilder implement these interfaces?
 interface BeliefOnlyAdditionTrigger<Belief : Any, Goal : Any, Env : Environment> {
-    fun <Context : Any> belief(beliefQuery: Belief.() -> Context?): PlanBuilder.Addition.Belief<Belief, Goal, Env, Context>
+    fun <Context : Any> belief(
+        beliefQuery: Belief.() -> Context?,
+    ): PlanBuilder.Addition.Belief<Belief, Goal, Env, Context>
 }
 
 interface BeliefOnlyRemovalTrigger<Belief : Any, Goal : Any, Env : Environment> {
-    fun <Context : Any> belief(beliefQuery: Belief.() -> Context?): PlanBuilder.Removal.Belief<Belief, Goal, Env, Context>
+    fun <Context : Any> belief(
+        beliefQuery: Belief.() -> Context?,
+    ): PlanBuilder.Removal.Belief<Belief, Goal, Env, Context>
 }
 
 class BeliefPlan<Belief : Any, Goal : Any, Env : Environment> {

@@ -16,8 +16,9 @@ class BeliefAdditionPlanBuilderImpl<Belief : Any, Goal : Any, Env : Environment,
     val trigger: Belief.() -> Context?,
     var guard: GuardScope<Belief>.(Context) -> Context? = { x -> x },
 ) : PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> {
-    override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?): PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> =
-        this.also { this.guard = guard }
+    override fun onlyWhen(
+        guard: GuardScope<Belief>.(Context) -> Context?,
+    ): PlanBuilder.Addition.Belief<Belief, Goal, Env, Context> = this.also { this.guard = guard }
 
     override fun <PlanResult> triggersImpl(
         resultType: KType,
@@ -31,8 +32,9 @@ class GoalAdditionPlanBuilderImpl<Belief : Any, Goal : Any, Env : Environment, C
     val trigger: Goal.() -> Context?,
     var guard: GuardScope<Belief>.(Context) -> Context? = { x -> x },
 ) : PlanBuilder.Addition.Goal<Belief, Goal, Env, Context> {
-    override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?): PlanBuilder.Addition.Goal<Belief, Goal, Env, Context> =
-        this.also { this.guard = guard }
+    override fun onlyWhen(
+        guard: GuardScope<Belief>.(Context) -> Context?,
+    ): PlanBuilder.Addition.Goal<Belief, Goal, Env, Context> = this.also { this.guard = guard }
 
     override fun <PlanResult> triggersImpl(
         resultType: KType,
@@ -46,8 +48,9 @@ class BeliefRemovalPlanBuilderImpl<Belief : Any, Goal : Any, Env : Environment, 
     val trigger: Belief.() -> Context?,
     var guard: GuardScope<Belief>.(Context) -> Context? = { x -> x },
 ) : PlanBuilder.Removal.Belief<Belief, Goal, Env, Context> {
-    override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?): PlanBuilder.Removal.Belief<Belief, Goal, Env, Context> =
-        this.also { this.guard = guard }
+    override fun onlyWhen(
+        guard: GuardScope<Belief>.(Context) -> Context?,
+    ): PlanBuilder.Removal.Belief<Belief, Goal, Env, Context> = this.also { this.guard = guard }
 
     override fun <PlanResult> triggersImpl(
         resultType: KType,
@@ -61,8 +64,9 @@ class GoalRemovalPlanBuilderImpl<Belief : Any, Goal : Any, Env : Environment, Co
     val trigger: Goal.() -> Context?,
     var guard: GuardScope<Belief>.(Context) -> Context? = { x -> x },
 ) : PlanBuilder.Removal.Goal<Belief, Goal, Env, Context> {
-    override fun onlyWhen(guard: GuardScope<Belief>.(Context) -> Context?): PlanBuilder.Removal.Goal<Belief, Goal, Env, Context> =
-        this.also { this.guard = guard }
+    override fun onlyWhen(
+        guard: GuardScope<Belief>.(Context) -> Context?,
+    ): PlanBuilder.Removal.Goal<Belief, Goal, Env, Context> = this.also { this.guard = guard }
 
     override fun <PlanResult> triggersImpl(
         resultType: KType,

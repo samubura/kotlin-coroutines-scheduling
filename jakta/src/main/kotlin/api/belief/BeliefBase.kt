@@ -12,7 +12,8 @@ interface BeliefBase<Belief : Any> : MutableCollection<Belief> {
     fun snapshot(): Collection<Belief>
 
     companion object {
-        fun <Belief : Any> empty(agentEvents: SendChannel<Event.Internal.Belief<Belief>>): BeliefBase<Belief> = BeliefBaseImpl(agentEvents)
+        fun <Belief : Any> empty(agentEvents: SendChannel<Event.Internal.Belief<Belief>>): BeliefBase<Belief> =
+            BeliefBaseImpl(agentEvents)
 
         fun <Belief : Any> of(
             agentEvents: SendChannel<Event.Internal.Belief<Belief>>,

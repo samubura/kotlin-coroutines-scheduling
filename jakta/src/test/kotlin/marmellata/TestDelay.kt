@@ -10,25 +10,24 @@ import org.junit.jupiter.api.Test
 
 class TestDelay {
     @Test
-    fun testDelay() =
-        runTest {
-            mas {
-                environment { TestEnvironment() }
-                agent {
-                    hasInitialGoals {
-                        !"performDelay"
-                    }
-                    hasPlans {
-                        adding.goal {
-                            ifGoalMatch("performDelay")
-                        } triggers {
-                            agent.print("Hello World Before!")
-                            delay(5000)
-                            agent.print("Hello World After!")
-                            agent.terminate()
-                        }
+    fun testDelay() = runTest {
+        mas {
+            environment { TestEnvironment() }
+            agent {
+                hasInitialGoals {
+                    !"performDelay"
+                }
+                hasPlans {
+                    adding.goal {
+                        ifGoalMatch("performDelay")
+                    } triggers {
+                        agent.print("Hello World Before!")
+                        delay(5000)
+                        agent.print("Hello World After!")
+                        agent.terminate()
                     }
                 }
-            }.run()
-        }
+            }
+        }.run()
+    }
 }

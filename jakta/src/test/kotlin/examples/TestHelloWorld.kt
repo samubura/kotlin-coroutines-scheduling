@@ -3,9 +3,9 @@ package examples
 import api.environment.TestEnvironment
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
-import ifGoalMatch
 import dsl.mas
 import dsl.plan.triggers
+import ifGoalMatch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -31,12 +31,12 @@ class TestHelloWorld {
     }
 
     @BeforeEach
-    fun setup(){
-        Logger.setMinSeverity(Severity.Error)
+    fun setup() {
+        Logger.setMinSeverity(Severity.Debug)
     }
 
     @Test
-    fun testHello(){
+    fun testHello() {
         runTest {
             val job = launch {
                 helloWorld.run()
@@ -44,5 +44,4 @@ class TestHelloWorld {
             job.join()
         }
     }
-
 }

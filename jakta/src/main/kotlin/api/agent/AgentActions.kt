@@ -16,10 +16,7 @@ interface AgentActions<Belief : Any, Goal : Any> {
      * Adds an event to the agent's queue to achieve a goal and suspends until the goal is achieved.
      */
     @Deprecated("Use achieve instead", ReplaceWith("achieve(goal)"), DeprecationLevel.ERROR)
-    suspend fun <PlanResult> internalAchieve(
-        goal: Goal,
-        resultType: KType,
-    ): PlanResult
+    suspend fun <PlanResult> internalAchieve(goal: Goal, resultType: KType): PlanResult
 
     /**
      * Adds an event to the agent's queue to achieve a goal and don't wait for it to complete.

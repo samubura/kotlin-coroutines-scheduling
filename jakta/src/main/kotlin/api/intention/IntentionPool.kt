@@ -45,9 +45,7 @@ interface MutableIntentionPool : AddableIntentionPool {
     suspend fun stepIntention(event: Event.Internal.Step): Unit
 }
 
-class MutableIntentionPoolImpl(
-    val events: SendChannel<Event.Internal.Step>,
-) : MutableIntentionPool {
+class MutableIntentionPoolImpl(val events: SendChannel<Event.Internal.Step>) : MutableIntentionPool {
     private val log =
         Logger(
             Logger.config,
@@ -58,11 +56,10 @@ class MutableIntentionPoolImpl(
     private val intentions: MutableSet<Intention> = mutableSetOf()
 
     // TODO(This needs to be invoked by someone)
-    override suspend fun drop(intentionID: IntentionID): Boolean =
-        intentions.find { it.id == intentionID }?.let {
-            it.job.cancelAndJoin() // Cancel the job associated to the intention
-            intentions.remove(it)
-        } ?: false
+    override suspend fun drop(intentionID: IntentionID): Boolean = intentions.find { it.id == intentionID }?.let {
+        it.job.cancelAndJoin() // Cancel the job associated to the intention
+        intentions.remove(it)
+    } ?: false
 
     override fun tryPut(intention: Intention): Boolean = intentions.add(intention)
 

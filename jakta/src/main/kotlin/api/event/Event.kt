@@ -28,9 +28,7 @@ sealed interface Event {
             interface Remove<B : Any> : Belief<B>
         }
 
-        data class Step(
-            override val intention: Intention,
-        ) : Internal
+        data class Step(override val intention: Intention) : Internal
     }
 
     // TODO external events

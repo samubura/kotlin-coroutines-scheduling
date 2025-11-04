@@ -20,7 +20,7 @@ class TestBeliefRemoval {
                     +"testBelief"
                 }
                 hasInitialGoals {
-                    ! "removeBelief"
+                    !"removeBelief"
                 }
                 hasPlans {
                     adding.goal {
@@ -28,8 +28,8 @@ class TestBeliefRemoval {
                     } triggers {
                         agent.forget("testBelief")
                     }
-                    removing.belief{
-                        this.takeIf{ it == "testBelief" }
+                    removing.belief {
+                        this.takeIf { it == "testBelief" }
                     } triggers {
                         agent.print("Belief removed: $context")
                         agent.terminate()

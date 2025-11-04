@@ -1,7 +1,6 @@
 package examples
 
 import api.environment.TestEnvironment
-import api.intention.IntentionInterceptor
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import dsl.mas

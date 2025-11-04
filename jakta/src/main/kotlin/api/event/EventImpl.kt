@@ -30,12 +30,8 @@ data class GoalFailedEvent<G : Any, PlanResult>(
     override val resultType: KType,
 ) : Event.Internal.Goal.Failed<G, PlanResult>
 
-data class BeliefAddEvent<B : Any>(
-    override val belief: B,
-    override val intention: Intention? = null,
-) : Event.Internal.Belief.Add<B>
+data class BeliefAddEvent<B : Any>(override val belief: B, override val intention: Intention? = null) :
+    Event.Internal.Belief.Add<B>
 
-data class BeliefRemoveEvent<B : Any>(
-    override val belief: B,
-    override val intention: Intention? = null,
-) : Event.Internal.Belief.Remove<B>
+data class BeliefRemoveEvent<B : Any>(override val belief: B, override val intention: Intention? = null) :
+    Event.Internal.Belief.Remove<B>

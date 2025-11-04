@@ -54,7 +54,8 @@ sealed interface PlanBuilder<B : Any, G : Any, Env : Environment, Context : Any>
         }
     }
 
-    sealed interface FailureInterception<B : Any, G : Any, Env : Environment, Context : Any> : PlanBuilder<B, G, Env, Context> {
+    sealed interface FailureInterception<B : Any, G : Any, Env : Environment, Context : Any> :
+        PlanBuilder<B, G, Env, Context> {
         // TODO should we add Belief failure interception??
 
         interface Goal<B : Any, G : Any, Env : Environment, Context : Any> : FailureInterception<B, G, Env, Context> {
@@ -70,9 +71,10 @@ sealed interface PlanBuilder<B : Any, G : Any, Env : Environment, Context : Any>
 }
 
 @Suppress("DEPRECATION_ERROR")
-inline infix fun <B : Any, G : Any, Env : Environment, Context : Any, reified PlanResult> PlanBuilder.Addition.Belief<B, G, Env, Context>.triggers(
+inline infix fun <B, G, Env, Context, reified PlanResult> PlanBuilder.Addition.Belief<B, G, Env, Context>.triggers(
     noinline body: suspend PlanScope<B, G, Env, Context>.() -> PlanResult,
-): Plan.Belief.Addition<B, G, Env, Context, PlanResult> = this.triggersImpl(typeOf<PlanResult>(), body)
+): Plan.Belief.Addition<B, G, Env, Context, PlanResult> where B : Any, G : Any, Env : Environment, Context : Any =
+    this.triggersImpl(typeOf<PlanResult>(), body)
 
 @Suppress("DEPRECATION_ERROR")
 inline infix fun <B : Any, G : Any, Env : Environment, Context : Any, reified PlanResult> PlanBuilder.Addition.Goal<B, G, Env, Context>.triggers(
