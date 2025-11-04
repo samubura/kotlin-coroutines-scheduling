@@ -1,6 +1,7 @@
 package dsl.agent
 
 import api.agent.Agent
+import api.agent.AgentID
 import api.agent.AgentImpl
 import api.environment.Environment
 import api.plan.Plan
@@ -31,7 +32,7 @@ interface AgentBuilder<Belief : Any, Goal : Any, Env : Environment> {
     fun build(): Agent<Belief, Goal, Env>
 }
 
-class AgentBuilderImpl<Belief : Any, Goal : Any, Env : Environment> : AgentBuilder<Belief, Goal, Env> {
+class AgentBuilderImpl<Belief : Any, Goal : Any, Env : Environment>(val name: String? = null) : AgentBuilder<Belief, Goal, Env> {
     private var initialBeliefs = listOf<Belief>()
     private var initialGoals = listOf<Goal>()
     private var beliefPlans = listOf<Plan.Belief<Belief, Goal, Env, *, *>>()
@@ -76,5 +77,6 @@ class AgentBuilderImpl<Belief : Any, Goal : Any, Env : Environment> : AgentBuild
         goalPlans += plans
     }
 
-    override fun build(): Agent<Belief, Goal, Env> = AgentImpl(initialBeliefs, initialGoals, beliefPlans, goalPlans)
+    override fun build(): Agent<Belief, Goal, Env> =
+        AgentImpl(initialBeliefs, initialGoals, beliefPlans, goalPlans, name?.let { AgentID(it) } ?: AgentID())
 }

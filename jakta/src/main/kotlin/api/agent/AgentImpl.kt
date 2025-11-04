@@ -28,7 +28,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     initialGoals: List<Goal>,
     override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
     override val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>,
-    override val id: AgentID = AgentID(),
+    private val agentID : AgentID = AgentID(),
     private val events: Channel<Event.Internal> = Channel(Channel.UNLIMITED),
 ) : Agent<Belief, Goal, Env>,
     AgentActions<Belief, Goal>,
@@ -37,8 +37,10 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     private val log =
         Logger(
             Logger.config,
-            "Agent[${id.id}]",
+            this.name,
         )
+    override val name: String
+        get() = agentID.displayName
 
     override val beliefs: Collection<Belief>
         get() = beliefBase.snapshot()

@@ -7,7 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 
 interface Agent<Belief : Any, Goal : Any, Env : Environment> : SendChannel<Event.Internal> {
-    val id: AgentID
+    val name : String
     val beliefs: Collection<Belief>
     val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>
     val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>

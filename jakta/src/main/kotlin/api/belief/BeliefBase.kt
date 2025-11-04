@@ -1,9 +1,7 @@
 package api.belief
 
-import BeliefBaseImpl
 import api.event.Event
 import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.flow.Flow
 
 // TODO support more complex Belief bases that have e.g. production rules for inference.
 // How would one customize this component?? Right now it is "hidden" inside the AgentImpl..

@@ -15,7 +15,7 @@ class TestHelloWorld {
 
     val helloWorld = mas {
         environment { TestEnvironment() }
-        agent {
+        agent("HelloAgent") {
             hasInitialGoals {
                 !"goal"
             }

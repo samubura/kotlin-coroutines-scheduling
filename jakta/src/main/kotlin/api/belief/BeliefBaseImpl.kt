@@ -1,4 +1,5 @@
-import api.belief.BeliefBase
+package api.belief
+
 import api.event.BeliefAddEvent
 import api.event.BeliefRemoveEvent
 import api.event.Event

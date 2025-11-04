@@ -15,7 +15,7 @@ class TestBeliefPlan {
     val helloWorld =
         mas {
             environment { TestEnvironment() }
-            agent {
+            agent("TestBeliefAgent") {
                 believes {
                     +"testBelief"
                 }

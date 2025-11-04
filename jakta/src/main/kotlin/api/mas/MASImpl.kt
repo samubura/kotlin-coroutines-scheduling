@@ -26,12 +26,12 @@ data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
         val environmentContext = EnvironmentContext(environment)
         agents
             .map { agent ->
-                log.d { "Launching agent ${agent.id.id}" }
+                log.d { "Launching agent ${agent.name}" }
                 launch(environmentContext) {
                     supervisorScope {
-                        log.d { "Agent ${agent.id.id} started" }
+                        log.d { "Agent ${agent.name} started" }
                         while (true) {
-                            log.d { "Running one step of Agent ${agent.id.id}" }
+                            log.d { "Running one step of Agent ${agent.name}" }
                             agent.step(this)
                         }
                     }

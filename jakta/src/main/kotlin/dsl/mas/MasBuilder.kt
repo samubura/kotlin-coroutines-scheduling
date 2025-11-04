@@ -13,6 +13,8 @@ interface MasBuilder<Belief : Any, Goal : Any, Env : Environment> {
     @JaktaDSL
     fun agent(block: AgentBuilder<Belief, Goal, Env>.() -> Unit): Agent<Belief, Goal, Env>
 
+    fun agent(name: String, block: AgentBuilder<Belief, Goal, Env>.() -> Unit): Agent<Belief, Goal, Env>
+
     fun withAgents(vararg agents: Agent<Belief, Goal, Env>)
 
     fun environment(block: () -> Env)
@@ -24,8 +26,20 @@ open class MasBuilderImpl<Belief : Any, Goal : Any, Env : Environment> : MasBuil
     protected var environment: Env? = null
     protected val agents = mutableListOf<Agent<Belief, Goal, Env>>()
 
-    override fun agent(block: AgentBuilder<Belief, Goal, Env>.() -> Unit): Agent<Belief, Goal, Env> {
-        val agentBuilder = AgentBuilderImpl<Belief, Goal, Env>()
+    override fun agent(
+        block: AgentBuilder<Belief, Goal, Env>.() -> Unit
+    ): Agent<Belief, Goal, Env> = buildAgent(null, block)
+
+    override fun agent(
+        name: String,
+        block: AgentBuilder<Belief, Goal, Env>.() -> Unit
+    ): Agent<Belief, Goal, Env> = buildAgent(name, block)
+
+    private fun buildAgent(
+        name: String?,
+        block: AgentBuilder<Belief, Goal, Env>.() -> Unit
+    ): Agent<Belief, Goal, Env> {
+        val agentBuilder = AgentBuilderImpl<Belief, Goal, Env>(name)
         val agent = agentBuilder.apply(block).build()
         agents += agent
         return agent
