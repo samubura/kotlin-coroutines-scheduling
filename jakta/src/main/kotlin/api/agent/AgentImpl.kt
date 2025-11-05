@@ -20,8 +20,10 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.reflect.KType
+import kotlin.system.exitProcess
 
 open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     initialBeliefs: Collection<Belief>,
@@ -181,7 +183,9 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
                 log.w { "Attempting to handle the failure of goal: $event.goal" }
                 events.trySend(GoalFailedEvent(event.goal, event.completion, event.intention, event.resultType))
             }
-            else -> log.e { "Handling of event $event failed with exception: ${e.message}" }
+            else -> log.e { "Handling of event $event failed with exception: ${e.message}" }.also {
+                runBlocking{ stop() }
+            }
         }
     }
 

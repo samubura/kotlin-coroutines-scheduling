@@ -5,6 +5,7 @@ import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import dsl.mas
 import dsl.plan.triggers
+import executeInTestScope
 import ifGoalMatch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
@@ -56,12 +57,6 @@ class TestConcurrentDelay {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun testHello() {
-        runTest {
-            val job =
-                launch {
-                    helloWorld.run()
-                }
-            job.join()
-        }
+        executeInTestScope { helloWorld }
     }
 }

@@ -5,6 +5,7 @@ import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import dsl.mas
 import dsl.plan.triggers
+import executeInTestScope
 import ifGoalMatch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -45,12 +46,6 @@ class TestBeliefRemoval {
 
     @Test
     fun testBelief() {
-        runTest {
-            val job =
-                launch {
-                    helloWorld.run()
-                }
-            job.join()
-        }
+        executeInTestScope { helloWorld }
     }
 }

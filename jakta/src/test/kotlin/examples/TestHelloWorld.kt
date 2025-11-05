@@ -5,6 +5,7 @@ import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import dsl.mas
 import dsl.plan.triggers
+import executeInTestScope
 import ifGoalMatch
 import io.kotest.core.spec.style.ShouldSpec
 import kotlinx.coroutines.launch
@@ -35,13 +36,7 @@ class TestHelloWorld: ShouldSpec({
         }
 
         should("terminate") {
-            runTest {
-                val job = launch {
-                    helloWorld.run()
-                }
-                job.join()
-            }
+            executeInTestScope { helloWorld }
         }
     }
-
 })
