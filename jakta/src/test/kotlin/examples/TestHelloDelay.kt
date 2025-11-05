@@ -12,28 +12,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-
+import time
 
 class TestHelloDelay {
-    val helloWorld =
-        mas {
-            environment { TestEnvironment() }
-            agent {
-                hasInitialGoals {
-                    !"goal"
-                }
-                hasPlans {
-                    adding.goal {
-                        ifGoalMatch("goal")
-                    } triggers {
-                        agent.print("Hello...")
-                        delay(10000)
-                        agent.print("...World!")
-                        agent.terminate()
-                    }
-                }
-            }
-        }
 
     @BeforeEach
     fun setup() {
@@ -46,7 +27,26 @@ class TestHelloDelay {
         runTest {
             val job =
                 launch {
-                    helloWorld.run()
+                    mas {
+                        environment { TestEnvironment() }
+                        agent {
+                            hasInitialGoals {
+                                !"goal"
+                            }
+                            hasPlans {
+                                adding.goal {
+                                    ifGoalMatch("goal")
+                                } triggers {
+                                    agent.print("Hello...")
+                                    delay(10000)
+                                    agent.print("Time perceived by the agent: ${agent.time()}")
+                                    assert(agent.time() == 10000L)
+                                    agent.print("...World!")
+                                    agent.terminate()
+                                }
+                            }
+                        }
+                    }.run()
                 }
             job.join()
         }

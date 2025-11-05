@@ -35,6 +35,7 @@ interface AgentActions<Belief : Any, Goal : Any> {
      * Remove the belief from the agent's belief base (eventually generating events).
      */
     suspend fun forget(belief: Belief)
+
 }
 
 @Suppress("DEPRECATION_ERROR")

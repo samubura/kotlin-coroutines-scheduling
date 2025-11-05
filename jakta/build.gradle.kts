@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 //import io.gitlab.arturbosch.detekt.Detekt
 
 plugins {
@@ -36,3 +38,7 @@ kotlin {
 //tasks.withType<Detekt>().configureEach {
 //    enabled = false
 //}
+val compileTestKotlin: KotlinCompile by tasks
+compileTestKotlin.compilerOptions {
+    freeCompilerArgs.set(listOf("-Xcontext-parameters"))
+}
