@@ -6,49 +6,44 @@ import co.touchlab.kermit.Severity
 import dsl.mas
 import dsl.plan.triggers
 import ifGoalMatch
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import io.kotest.core.spec.style.ShouldSpec
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import time
 
-class TestHelloDelay {
+class TestHelloDelay: ShouldSpec({
 
-    @BeforeEach
-    fun setup() {
+    context("An agent that prints hello world with delay in TestScope must not stop, " +
+        "but still consider time as elapsed") {
         Logger.setMinSeverity(Severity.Debug)
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @Test
-    fun testHello() {
+        val timeToWait = 10000L
         runTest {
-            val job =
-                launch {
-                    mas {
-                        environment { TestEnvironment() }
-                        agent {
-                            hasInitialGoals {
-                                !"goal"
-                            }
-                            hasPlans {
-                                adding.goal {
-                                    ifGoalMatch("goal")
-                                } triggers {
-                                    agent.print("Hello...")
-                                    delay(10000)
-                                    agent.print("Time perceived by the agent: ${agent.time()}")
-                                    assert(agent.time() == 10000L)
-                                    agent.print("...World!")
-                                    agent.terminate()
-                                }
+            val job = launch {
+                mas {
+                    environment { TestEnvironment() }
+                    agent {
+                        hasInitialGoals {
+                            !"goal"
+                        }
+                        hasPlans {
+                            adding.goal {
+                                ifGoalMatch("goal")
+                            } triggers {
+                                agent.print("Hello...")
+                                val time = System.currentTimeMillis()
+                                delay(timeToWait)
+                                assert(System.currentTimeMillis() - time <= 100)
+                                agent.print("Time perceived by the agent: ${agent.time()}")
+                                assert(agent.time() == timeToWait)
+                                agent.print("...World!")
+                                agent.terminate()
                             }
                         }
-                    }.run()
-                }
+                    }
+                }.run()
+            }
             job.join()
         }
     }
-}
+})
