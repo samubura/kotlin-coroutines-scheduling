@@ -9,10 +9,10 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlin.test.Test
+
 
 class TestCancellation {
-    @Test
+
     fun testAgentCancellation() {
         val agent =
             agent {

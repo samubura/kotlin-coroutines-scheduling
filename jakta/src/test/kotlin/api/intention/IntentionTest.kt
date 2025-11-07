@@ -1,24 +1,27 @@
 package api.intention
 
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.equals.shouldBeEqual
 import kotlinx.coroutines.Job
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 
-class IntentionTest {
-    private lateinit var intention: Intention
+class IntentionTest : ShouldSpec({
 
-    @BeforeEach
-    fun init() {
-        intention = Intention(job = Job())
-    }
+    context("Intentions with the same id") {
+        val id = IntentionID()
+        val i1 = Intention(id=id, job = Job())
+        val i2 = Intention(id=id, job = Job())
 
-    @Test
-    fun testIntentionsEquivalence() {
-        assert(intention == Intention(id = intention.id, job = Job())) {
-            "The two intentions should be considered equals since their ID is the same, even if their job is different"
-        }
-        assert(intention != Intention(job = Job())) {
-            "The two intentions should be considered different since their ID is different"
+        should("be equal even if their jobs are different") {
+            i1 shouldBeEqual i2
         }
     }
-}
+
+    context("Intentions with different ids") {
+        val i1 = Intention(job = Job())
+        val i2 = Intention(job = Job())
+
+        should("not be equal") {
+            assert(i1 != i2)
+        }
+    }
+})

@@ -23,8 +23,6 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.bundles.kotest)
 
-    //TODO remove this at some point
-    testImplementation(kotlin("test"))
 }
 
 tasks.withType<Test>().configureEach {

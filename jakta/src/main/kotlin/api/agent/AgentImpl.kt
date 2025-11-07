@@ -180,11 +180,15 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     private fun handleFailure(event: Event.Internal, e: Exception) {
         when (event) {
             is Event.Internal.Goal.Add<*, *> -> {
-                log.w { "Attempting to handle the failure of goal: $event.goal" }
+                log.d { "Attempting to handle the failure of goal: $event.goal" }
                 events.trySend(GoalFailedEvent(event.goal, event.completion, event.intention, event.resultType))
             }
-            else -> log.e { "Handling of event $event failed with exception: ${e.message}" }.also {
-                runBlocking{ stop() }
+            is Event.Internal.Goal.Failed<*, *> -> {
+                log.d { "An error occurred when attempting to handle the failure of goal: $event.goal" }
+                event.completion?.completeExceptionally(e)
+            }
+            else -> {
+                log.w { "Handling of event $event failed with exception:${e.message}\n${e.stackTraceToString()}"}
             }
         }
     }

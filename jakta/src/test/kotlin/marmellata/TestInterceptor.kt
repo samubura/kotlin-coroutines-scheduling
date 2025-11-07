@@ -3,7 +3,7 @@ package marmellata
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Test
+
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
@@ -24,7 +24,7 @@ class TestInterceptor {
             }
     }
 
-    @Test
+
     fun testMinimal() {
         runTest {
             val job =

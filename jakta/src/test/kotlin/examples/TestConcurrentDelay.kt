@@ -1,25 +1,17 @@
 package examples
 
 import api.environment.TestEnvironment
-import co.touchlab.kermit.Logger
-import co.touchlab.kermit.Severity
+import io.kotest.core.spec.style.ShouldSpec
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import co.touchlab.kermit.*
 import dsl.mas
 import dsl.plan.triggers
 import executeInTestScope
 import ifGoalMatch
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.currentTime
-import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import kotlin.coroutines.coroutineContext
-import kotlin.test.assertEquals
 
-class TestConcurrentDelay {
+class TestConcurrentDelaySpec : ShouldSpec({
+
     val helloWorld =
         mas {
             environment { TestEnvironment() }
@@ -49,14 +41,12 @@ class TestConcurrentDelay {
             }
         }
 
-    @BeforeEach
-    fun setup() {
+    beforeEach {
         Logger.setMinSeverity(Severity.Error)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    @Test
-    fun testHello() {
+    should("run Hello World concurrently") {
+        @OptIn(ExperimentalCoroutinesApi::class)
         executeInTestScope { helloWorld }
     }
-}
+})

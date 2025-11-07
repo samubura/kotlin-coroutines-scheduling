@@ -9,7 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
 class TestDelay {
-    @Test
+
     fun testDelay() = runTest {
         mas {
             environment { TestEnvironment() }

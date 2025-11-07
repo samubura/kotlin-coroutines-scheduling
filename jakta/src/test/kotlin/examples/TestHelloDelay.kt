@@ -8,10 +8,9 @@ import dsl.plan.triggers
 import executeInTestScope
 import ifGoalMatch
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.longs.shouldBeLessThanOrEqual
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
-import time
 
 class TestHelloDelay: ShouldSpec({
 
@@ -34,9 +33,9 @@ class TestHelloDelay: ShouldSpec({
                             agent.print("Hello...")
                             val time = System.currentTimeMillis()
                             delay(timeToWait)
-                            assert(System.currentTimeMillis() - time <= 100)
-                            agent.print("Time perceived by the agent: ${agent.time()}")
-                            assert(agent.time() == timeToWait)
+                            System.currentTimeMillis() - time shouldBeLessThanOrEqual 100
+                            agent.print("Time perceived by the agent: ${environment.currentTime()}")
+                            environment.currentTime() shouldBe timeToWait
                             agent.print("...World!")
                             agent.terminate()
                         }
