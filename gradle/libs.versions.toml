@@ -1,32 +1,42 @@
 [versions]
-dokka = "2.1.0"
 coroutines = "1.10.2"
+dokka = "2.1.0"
 kermit = "2.0.4"
 kotest = "6.0.4"
 kotlin = "2.2.21"
 
+
+
 [libraries]
+kermit = {module = "co.touchlab:kermit", version.ref = "kermit"}
+
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotest-assertions-table = { module = "io.kotest:kotest-assertions-table", version.ref = "kotest" }
 kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 
-kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
-kermit = {module = "co.touchlab:kermit", version.ref = "kermit"}
-
 kotlinx-coroutines-core = {module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref="coroutines"}
 kotlinx-coroutines-test = {module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref="coroutines"}
 
-
-[plugins]
-dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
-kotest = { id = "io.kotest", version.ref = "kotest" }
-kotlin-qa = "org.danilopianini.gradle-kotlin-qa:0.95.3"
 
 [bundles]
 kotest = [
     "kotest-assertions-core",
     "kotest-assertions-table",
     "kotest-framework-engine",
-    "kotest-runner-junit5"
 ]
+
+[plugins]
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+gitSemVer = "org.danilopianini.git-sensitive-semantic-versioning-gradle-plugin:7.0.6"
+kotest = { id = "io.kotest", version.ref = "kotest" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-qa = "org.danilopianini.gradle-kotlin-qa:0.96.0"
+kover = "org.jetbrains.kotlinx.kover:0.9.3"
+multiJvmTesting = "org.danilopianini.multi-jvm-test-plugin:4.3.2"
+npm-publish = "org.danilopianini.npm.publish:4.1.5"
+publishOnCentral = "org.danilopianini.publish-on-central:9.1.7"
+taskTree = "com.dorongold.task-tree:4.0.1"
