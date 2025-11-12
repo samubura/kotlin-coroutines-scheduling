@@ -1,5 +1,6 @@
 package it.unibo.jakta.agent
 
+import co.touchlab.kermit.Logger
 import it.unibo.jakta.belief.BeliefBase
 import it.unibo.jakta.environment.Environment
 import it.unibo.jakta.environment.EnvironmentContext
@@ -12,30 +13,32 @@ import it.unibo.jakta.intention.MutableIntentionPool
 import it.unibo.jakta.intention.MutableIntentionPoolImpl
 import it.unibo.jakta.plan.GuardScope
 import it.unibo.jakta.plan.Plan
-import co.touchlab.kermit.Logger
+import kotlin.collections.filter
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.reflect.KType
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
-import kotlin.coroutines.ContinuationInterceptor
-import kotlin.reflect.KType
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlin.collections.filter
 
-open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.Environment>(
+/**
+ * Default implementation of an [Agent].
+ */
+open class AgentImpl<Belief : Any, Goal : Any, Env : Environment>(
     initialBeliefs: Collection<Belief>,
     initialGoals: List<Goal>,
-    override val beliefPlans: List<it.unibo.jakta.plan.Plan.Belief<Belief, Goal, Env, *, *>>,
-    override val goalPlans: List<it.unibo.jakta.plan.Plan.Goal<Belief, Goal, Env, *, *>>,
-    private val agentID : it.unibo.jakta.agent.AgentID = _root_ide_package_.it.unibo.jakta.agent.AgentID(),
-    private val events: Channel<it.unibo.jakta.event.Event.Internal> = Channel(Channel.UNLIMITED),
-) : it.unibo.jakta.agent.Agent<Belief, Goal, Env>,
-    it.unibo.jakta.agent.AgentActions<Belief, Goal>,
-    it.unibo.jakta.plan.GuardScope<Belief>,
-    SendChannel<it.unibo.jakta.event.Event.Internal> by events {
+    override val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>,
+    override val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>,
+    private val agentID: AgentID = AgentID(),
+    private val events: Channel<Event.Internal> = Channel(Channel.UNLIMITED),
+) : Agent<Belief, Goal, Env>,
+    AgentActions<Belief, Goal>,
+    GuardScope<Belief>,
+    SendChannel<Event.Internal> by events {
     private val log =
         Logger(
             Logger.config,
@@ -47,9 +50,9 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
     override val beliefs: Collection<Belief>
         get() = beliefBase.snapshot()
 
-    private val beliefBase: it.unibo.jakta.belief.BeliefBase<Belief> = _root_ide_package_.it.unibo.jakta.belief.BeliefBase.Companion.of(this, initialBeliefs)
-    private val intentionPool: it.unibo.jakta.intention.MutableIntentionPool =
-        _root_ide_package_.it.unibo.jakta.intention.MutableIntentionPoolImpl(this)
+    private val beliefBase: BeliefBase<Belief> = BeliefBase.of(this, initialBeliefs)
+    private val intentionPool: MutableIntentionPool =
+        MutableIntentionPoolImpl(this)
 
     init {
         initialGoals.forEach { alsoAchieve(it) }
@@ -62,9 +65,9 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
         when (event) {
             // TODO per rimuovere questo cast dovrei tipare Event.Internal
             //  con Belief e Goal (si può fare ma è subottimo?)
-            is it.unibo.jakta.event.Event.Internal.Belief<*> -> scope.handleBeliefEvent(event as it.unibo.jakta.event.Event.Internal.Belief<Belief>)
-            is it.unibo.jakta.event.Event.Internal.Goal<*, *> -> scope.handleGoalEvent(event as it.unibo.jakta.event.Event.Internal.Goal<Goal, Any?>)
-            is it.unibo.jakta.event.Event.Internal.Step -> handleStepEvent(event)
+            is Event.Internal.Belief<*> -> scope.handleBeliefEvent(event as Event.Internal.Belief<Belief>)
+            is Event.Internal.Goal<*, *> -> scope.handleGoalEvent(event as Event.Internal.Goal<Goal, Any?>)
+            is Event.Internal.Step -> handleStepEvent(event)
         }
     }
 
@@ -72,18 +75,18 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
      * Launches plans in the SupervisorScope of the Step.
      * @param event the belief event that triggered the plan execution.
      */
-    private suspend fun CoroutineScope.handleBeliefEvent(event: it.unibo.jakta.event.Event.Internal.Belief<Belief>) {
+    private suspend fun CoroutineScope.handleBeliefEvent(event: Event.Internal.Belief<Belief>) {
         selectPlan(
             entity = event.belief,
             entityMessage = when (event) {
-                is it.unibo.jakta.event.Event.Internal.Belief.Add<Belief> -> "addition of belief"
-                is it.unibo.jakta.event.Event.Internal.Belief.Remove<Belief> -> "removal of belief"
+                is Event.Internal.Belief.Add<Belief> -> "addition of belief"
+                is Event.Internal.Belief.Remove<Belief> -> "removal of belief"
             },
             planList = beliefPlans,
             relevantFilter = {
                 when (event) {
-                    is it.unibo.jakta.event.Event.Internal.Belief.Add<Belief> -> it is it.unibo.jakta.plan.Plan.Belief.Addition
-                    is it.unibo.jakta.event.Event.Internal.Belief.Remove<Belief> -> it is it.unibo.jakta.plan.Plan.Belief.Removal
+                    is Event.Internal.Belief.Add<Belief> -> it is Plan.Belief.Addition
+                    is Event.Internal.Belief.Remove<Belief> -> it is Plan.Belief.Removal
                 } && it.isRelevant(event.belief)
             },
             applicableFilter = {
@@ -102,16 +105,16 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
         selectPlan(
             entity = event.goal,
             entityMessage = when (event) {
-                is it.unibo.jakta.event.Event.Internal.Goal.Add<Goal, *> -> "addition of goal"
-                is it.unibo.jakta.event.Event.Internal.Goal.Remove<Goal, *> -> "removal of goal"
-                is it.unibo.jakta.event.Event.Internal.Goal.Failed<Goal, *> -> "failure of goal"
+                is Event.Internal.Goal.Add<Goal, *> -> "addition of goal"
+                is Event.Internal.Goal.Remove<Goal, *> -> "removal of goal"
+                is Event.Internal.Goal.Failed<Goal, *> -> "failure of goal"
             },
             planList = goalPlans,
             relevantFilter = {
                 when (event) {
-                    is it.unibo.jakta.event.Event.Internal.Goal.Add<Goal, *> -> it is it.unibo.jakta.plan.Plan.Goal.Addition
-                    is it.unibo.jakta.event.Event.Internal.Goal.Remove<Goal, *> -> it is it.unibo.jakta.plan.Plan.Goal.Removal
-                    is it.unibo.jakta.event.Event.Internal.Goal.Failed<Goal, *> -> it is it.unibo.jakta.plan.Plan.Goal.Failure
+                    is Event.Internal.Goal.Add<Goal, *> -> it is Plan.Goal.Addition
+                    is Event.Internal.Goal.Remove<Goal, *> -> it is Plan.Goal.Removal
+                    is Event.Internal.Goal.Failed<Goal, *> -> it is Plan.Goal.Failure
                 } && it.isRelevant(event.goal)
             },
             applicableFilter = {
@@ -125,18 +128,21 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
     }
 
     private suspend fun <TriggerEntity : Any> CoroutineScope.launchPlan(
-        event: it.unibo.jakta.event.Event.Internal,
+        event: Event.Internal,
         entity: TriggerEntity,
-        plan: it.unibo.jakta.plan.Plan<Belief, Goal, Env, TriggerEntity, *, *>,
+        plan: Plan<Belief, Goal, Env, TriggerEntity, *, *>,
         completion: CompletableDeferred<Any?>? = null, // TODO Check if this Any? can be improved
     ) {
         log.d { "Launching plan $plan for event $event" }
-        val environment: Env = currentCoroutineContext()[_root_ide_package_.it.unibo.jakta.environment.EnvironmentContext.Key]?.environment as Env
+        val environment: Env = currentCoroutineContext()[EnvironmentContext.Key]?.environment as Env
         val intention = intentionPool.nextIntention(event)
 
-        val interceptor = currentCoroutineContext()[ContinuationInterceptor]?: error{ "No ContinuationInterceptor in context"}
+        val interceptor =
+            currentCoroutineContext()[ContinuationInterceptor] ?: error { "No ContinuationInterceptor in context" }
 
-        launch(_root_ide_package_.it.unibo.jakta.intention.IntentionDispatcher(interceptor) + intention + intention.job) {
+        launch(IntentionDispatcher(interceptor) + intention + intention.job) {
+            // TODO maybe I should not suppress?? But I want to catch ALL exceptions..
+            @Suppress("TooGenericExceptionCaught")
             try {
                 log.d { "Running plan $plan" }
                 val result = plan.run(this@AgentImpl, this@AgentImpl, environment, entity)
@@ -151,10 +157,10 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
     private fun <TriggerEntity : Any> selectPlan(
         entity: TriggerEntity,
         entityMessage: String,
-        planList: List<it.unibo.jakta.plan.Plan<Belief, Goal, Env, TriggerEntity, *, *>>,
-        relevantFilter: (it.unibo.jakta.plan.Plan<Belief, Goal, Env, TriggerEntity, *, *>) -> Boolean,
-        applicableFilter: (it.unibo.jakta.plan.Plan<Belief, Goal, Env, TriggerEntity, *, *>) -> Boolean,
-    ): it.unibo.jakta.plan.Plan<Belief, Goal, Env, TriggerEntity, *, *>? {
+        planList: List<Plan<Belief, Goal, Env, TriggerEntity, *, *>>,
+        relevantFilter: (Plan<Belief, Goal, Env, TriggerEntity, *, *>) -> Boolean,
+        applicableFilter: (Plan<Belief, Goal, Env, TriggerEntity, *, *>) -> Boolean,
+    ): Plan<Belief, Goal, Env, TriggerEntity, *, *>? {
         val relevant = planList.filter(relevantFilter)
 
         if (relevant.isEmpty()) {
@@ -178,31 +184,31 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
 
     // TODO check if this is enough
     // what happens if a belief plan fails?
-    private fun handleFailure(event: it.unibo.jakta.event.Event.Internal, e: Exception) {
+    private fun handleFailure(event: Event.Internal, e: Exception) {
         when (event) {
-            is it.unibo.jakta.event.Event.Internal.Goal.Add<*, *> -> {
+            is Event.Internal.Goal.Add<*, *> -> {
                 log.d { "Attempting to handle the failure of goal: $event.goal" }
                 events.trySend(
-                    _root_ide_package_.it.unibo.jakta.event.GoalFailedEvent(
+                    GoalFailedEvent(
                         event.goal,
                         event.completion,
                         event.intention,
-                        event.resultType
-                    )
+                        event.resultType,
+                    ),
                 )
             }
-            is it.unibo.jakta.event.Event.Internal.Goal.Failed<*, *> -> {
+            is Event.Internal.Goal.Failed<*, *> -> {
                 log.d { "An error occurred when attempting to handle the failure of goal: $event.goal" }
                 event.completion?.completeExceptionally(e)
             }
             else -> {
-                log.w { "Handling of event $event failed with exception:${e.message}\n${e.stackTraceToString()}"}
+                log.w { "Handling of event $event failed with exception:${e.message}\n${e.stackTraceToString()}" }
             }
         }
     }
 
     // TODO(Missing implementation for greedy event selection in case Step.intention was removed from intention pool)
-    private suspend fun handleStepEvent(event: it.unibo.jakta.event.Event.Internal.Step) {
+    private suspend fun handleStepEvent(event: Event.Internal.Step) {
         log.d { "Handling step event for intention ${event.intention.id.id}" }
         intentionPool.stepIntention(event)
     }
@@ -210,12 +216,12 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
     @Deprecated("Use achieve instead", replaceWith = ReplaceWith("achieve(goal)"), level = DeprecationLevel.ERROR)
     override suspend fun <PlanResult> internalAchieve(goal: Goal, resultType: KType): PlanResult {
         val completion = CompletableDeferred<PlanResult>()
-        val intention = currentCoroutineContext()[_root_ide_package_.it.unibo.jakta.intention.Intention.Key]
+        val intention = currentCoroutineContext()[Intention]
 
         check(intention != null) { "Cannot happen that an achieve invocation comes from a null intention." }
 
         log.d { "Achieving $goal. Previous intention $intention" }
-        events.trySend(_root_ide_package_.it.unibo.jakta.event.GoalAddEvent(goal, resultType, completion, intention))
+        events.trySend(GoalAddEvent(goal, resultType, completion, intention))
         return completion.await() // Blocking the continuation
     }
 
@@ -224,7 +230,7 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
     }
 
     override fun alsoAchieve(goal: Goal) {
-        events.trySend(_root_ide_package_.it.unibo.jakta.event.GoalAddEvent.Companion.withNoResult(goal))
+        events.trySend(GoalAddEvent.withNoResult(goal))
     }
 
     override suspend fun believe(belief: Belief) {
@@ -237,7 +243,6 @@ open class AgentImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.
     }
 
     override suspend fun terminate() = stop()
-
 
     override suspend fun stop() {
         // TODO not sure this is ok

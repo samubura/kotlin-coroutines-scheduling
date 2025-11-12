@@ -12,6 +12,10 @@ import it.unibo.jakta.plan.PlanBuilder
 import it.unibo.jakta.plan.TriggerAdditionImpl
 import it.unibo.jakta.plan.TriggerRemovalImpl
 
+/**
+ * Entry point for creating a multi-agent system using the Jakta DSL.
+ * @return an instantiated MAS.
+ */
 @JaktaDSL
 fun <Belief : Any, Goal : Any, Env : Environment> mas(
     block: MasBuilder<Belief, Goal, Env>.() -> Unit,
@@ -21,6 +25,10 @@ fun <Belief : Any, Goal : Any, Env : Environment> mas(
     return mb.build()
 }
 
+/**
+ * Entry point for creating an agent using the Jakta DSL.
+ * @return an instantiated Agent.
+ */
 @JaktaDSL
 fun <Belief : Any, Goal : Any, Env : Environment> agent(
     block: AgentBuilder<Belief, Goal, Env>.() -> Unit,
@@ -38,19 +46,36 @@ fun <Belief : Any, Goal : Any, Env : Environment> agent(
 // a user might be tempted to create multiple belief plans in the same block but only the latter is returned
 
 // TODO maybe actually make the triggerBuilder implement these interfaces?
+
+/**
+ * Entry point for belief addition only plans.
+ */
 interface BeliefOnlyAdditionTrigger<Belief : Any, Goal : Any, Env : Environment> {
+    /**
+     * Given a @param[beliefQuery] as a function that matches a belief
+     * and extracts a context from it if the belief matches.
+     * @return a plan builder for belief addition triggers.
+     */
     fun <Context : Any> belief(
         beliefQuery: Belief.() -> Context?,
     ): PlanBuilder.Addition.Belief<Belief, Goal, Env, Context>
 }
 
+/**
+ * Entry point for belief removal only plans.
+ */
 interface BeliefOnlyRemovalTrigger<Belief : Any, Goal : Any, Env : Environment> {
+    /**
+     * Given a @param[beliefQuery] as a function that matches a belief
+     * and extracts a context from it if the belief matches.
+     * @return a plan builder for belief removal triggers.
+     */
     fun <Context : Any> belief(
         beliefQuery: Belief.() -> Context?,
     ): PlanBuilder.Removal.Belief<Belief, Goal, Env, Context>
 }
 
-class BeliefPlan<Belief : Any, Goal : Any, Env : Environment> {
+private class BeliefPlan<Belief : Any, Goal : Any, Env : Environment> {
     val adding: BeliefOnlyAdditionTrigger<Belief, Goal, Env>
         get() =
             object : BeliefOnlyAdditionTrigger<Belief, Goal, Env> {

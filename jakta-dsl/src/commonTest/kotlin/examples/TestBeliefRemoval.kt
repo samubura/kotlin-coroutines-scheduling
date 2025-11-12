@@ -5,12 +5,12 @@ import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import executeInTestScope
 import ifGoalMatch
-import io.kotest.core.spec.style.ShouldSpec
 import it.unibo.jakta.mas
 import it.unibo.jakta.plan.triggers
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 
-
-class TestBeliefRemoval : ShouldSpec( {
+class TestBeliefRemoval {
     val helloWorld =
         mas {
             environment { TestEnvironment() }
@@ -37,11 +37,13 @@ class TestBeliefRemoval : ShouldSpec( {
             }
         }
 
-    beforeEach {
+    @BeforeTest
+    fun setup() {
         Logger.setMinSeverity(Severity.Warn)
     }
 
-   should("have the belief removal plan triggered") {
+    @Test
+    fun testBeliefRemoval() {
         executeInTestScope { helloWorld }
     }
-})
+}

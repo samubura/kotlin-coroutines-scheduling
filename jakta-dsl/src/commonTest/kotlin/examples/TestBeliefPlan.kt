@@ -4,12 +4,12 @@ import TestEnvironment
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import executeInTestScope
-import io.kotest.core.spec.style.ShouldSpec
 import it.unibo.jakta.mas
 import it.unibo.jakta.plan.triggers
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 
-
-class TestBeliefPlan : ShouldSpec({
+class TestBeliefPlan {
     val helloWorld =
         mas {
             environment { TestEnvironment() }
@@ -28,11 +28,13 @@ class TestBeliefPlan : ShouldSpec({
             }
         }
 
-    beforeEach {
+    @BeforeTest
+    fun setup() {
         Logger.setMinSeverity(Severity.Error)
     }
 
-    should("have the belief plan triggered") {
+    @Test
+    fun testBeliefAddition() {
         executeInTestScope { helloWorld }
     }
-})
+}

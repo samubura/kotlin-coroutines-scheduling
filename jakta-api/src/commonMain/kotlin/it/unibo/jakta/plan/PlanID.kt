@@ -3,8 +3,12 @@ package it.unibo.jakta.plan
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-data class PlanID(val id: String = _root_ide_package_.it.unibo.jakta.plan.PlanID.Companion.generateId()) {
-    companion object {
+/**
+ * Unique identifier for a Plan.
+ * @param[id] the identifier as a string.
+ */
+data class PlanID(val id: String = generateId()) {
+    private companion object {
         @OptIn(ExperimentalUuidApi::class)
         private fun generateId(): String = Uuid.random().toString()
     }

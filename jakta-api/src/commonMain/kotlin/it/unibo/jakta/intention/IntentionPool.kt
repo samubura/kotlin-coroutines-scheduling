@@ -1,50 +1,63 @@
 package it.unibo.jakta.intention
 
-import it.unibo.jakta.event.Event
 import co.touchlab.kermit.Logger
+import it.unibo.jakta.event.Event
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.job
 
+/**
+ * Represents a pool of intentions managed by an agent.
+ */
 interface IntentionPool {
     /**
-     * Given an event, it returns the intention to execute it.
+     * Given an event, it returns an intention to handle it.
+     * @param[event] the event to get the intention for.
      * @return a new intention if the event does not reference any existing intention,
      *        or the referenced intention if it exists.
      */
-    suspend fun nextIntention(event: it.unibo.jakta.event.Event.Internal): it.unibo.jakta.intention.Intention
+    suspend fun nextIntention(event: Event.Internal): Intention
 
     /**
      * Returns the set of intentions currently in the pool.
      */
-    fun getIntentionsSet(): Set<it.unibo.jakta.intention.Intention>
+    fun getIntentionsSet(): Set<Intention>
 }
 
-interface AddableIntentionPool : it.unibo.jakta.intention.IntentionPool {
+/**
+ * An intention pool that allows adding intentions.
+ */
+interface AddableIntentionPool : IntentionPool {
     /**
      * Tries to add an intention to the pool.
      * @return true if the intention was added, false if an intention with the same ID already exists.
      */
-    fun tryPut(intention: it.unibo.jakta.intention.Intention): Boolean
+    fun tryPut(intention: Intention): Boolean
 }
 
-interface MutableIntentionPool : it.unibo.jakta.intention.AddableIntentionPool {
+/**
+ * A mutable intention pool that allows adding and dropping intentions.
+ */
+interface MutableIntentionPool : AddableIntentionPool {
     /**
      * Drops the intention with the given ID from the pool.
      * @return true if the intention was found and dropped, false otherwise.
      */
-    suspend fun drop(intentionID: it.unibo.jakta.intention.IntentionID): Boolean
+    suspend fun drop(intentionID: IntentionID): Boolean
 
     /**
      * Executes one step of the intention referenced by this event.
      */
-    suspend fun stepIntention(event: it.unibo.jakta.event.Event.Internal.Step): Unit
+    suspend fun stepIntention(event: Event.Internal.Step): Unit
 }
 
-class MutableIntentionPoolImpl(val events: SendChannel<it.unibo.jakta.event.Event.Internal.Step>) :
-    it.unibo.jakta.intention.MutableIntentionPool {
+/**
+ * Implementation of a mutable intention pool.
+ * @param events the channel to send internal events when intentions are ready to step.
+ */
+class MutableIntentionPoolImpl(val events: SendChannel<Event.Internal.Step>) : MutableIntentionPool {
     private val log =
         Logger(
             Logger.config,
@@ -52,17 +65,17 @@ class MutableIntentionPoolImpl(val events: SendChannel<it.unibo.jakta.event.Even
         )
 
     /** List of intentions currently managed by the agent. **/
-    private val intentions: MutableSet<it.unibo.jakta.intention.Intention> = mutableSetOf()
+    private val intentions: MutableSet<Intention> = mutableSetOf()
 
     // TODO(This needs to be invoked by someone)
-    override suspend fun drop(intentionID: it.unibo.jakta.intention.IntentionID): Boolean = intentions.find { it.id == intentionID }?.let {
+    override suspend fun drop(intentionID: IntentionID): Boolean = intentions.find { it.id == intentionID }?.let {
         it.job.cancelAndJoin() // Cancel the job associated to the intention
         intentions.remove(it)
     } ?: false
 
-    override fun tryPut(intention: it.unibo.jakta.intention.Intention): Boolean = intentions.add(intention)
+    override fun tryPut(intention: Intention): Boolean = intentions.add(intention)
 
-    override suspend fun nextIntention(event: it.unibo.jakta.event.Event.Internal): it.unibo.jakta.intention.Intention {
+    override suspend fun nextIntention(event: Event.Internal): Intention {
         val nextIntention =
             event.intention?.let {
                 // If the referenced intention exists, use its context
@@ -84,17 +97,17 @@ class MutableIntentionPoolImpl(val events: SendChannel<it.unibo.jakta.event.Even
         return nextIntention
     }
 
-    override suspend fun stepIntention(event: it.unibo.jakta.event.Event.Internal.Step) {
+    override suspend fun stepIntention(event: Event.Internal.Step) {
         log.d { "Stepping intention ${event.intention.id.id}" }
         intentions.find { it == event.intention }?.step() ?: run {
             log.e { "Intention ${event.intention.id.id} not found" }
         }
     }
 
-    override fun getIntentionsSet(): Set<it.unibo.jakta.intention.Intention> = setOf(*intentions.toTypedArray())
+    override fun getIntentionsSet(): Set<Intention> = setOf(*intentions.toTypedArray())
 
-    private fun onIntentionReadyToStep(intention: it.unibo.jakta.intention.Intention) {
+    private fun onIntentionReadyToStep(intention: Intention) {
         log.d { "Intention ${intention.id.id} is ready to step" }
-        events.trySend(_root_ide_package_.it.unibo.jakta.event.Event.Internal.Step(intention))
+        events.trySend(Event.Internal.Step(intention))
     }
 }

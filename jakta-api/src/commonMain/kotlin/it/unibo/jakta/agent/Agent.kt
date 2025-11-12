@@ -6,11 +6,29 @@ import it.unibo.jakta.plan.Plan
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 
-interface Agent<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.Environment> : SendChannel<it.unibo.jakta.event.Event.Internal> {
-    val name : String
+/**
+ * Represents a generic agent in the MAS.
+ */
+interface Agent<Belief : Any, Goal : Any, Env : Environment> : SendChannel<Event.Internal> {
+    /**
+     * The name of the agent.
+     */
+    val name: String
+
+    /**
+     * The *beliefs* currently held by the agent.
+     */
     val beliefs: Collection<Belief>
-    val beliefPlans: List<it.unibo.jakta.plan.Plan.Belief<Belief, Goal, Env, *, *>>
-    val goalPlans: List<it.unibo.jakta.plan.Plan.Goal<Belief, Goal, Env, *, *>>
+
+    /**
+     * The plans available to handle belief-related events.
+     */
+    val beliefPlans: List<Plan.Belief<Belief, Goal, Env, *, *>>
+
+    /**
+     * The plans available to handle goal-related events.
+     */
+    val goalPlans: List<Plan.Goal<Belief, Goal, Env, *, *>>
 
     /**
      * Runs a step of a reasoning cycle, suspends until an event is available and process it.

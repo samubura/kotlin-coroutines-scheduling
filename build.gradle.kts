@@ -9,7 +9,6 @@ plugins {
     alias(libs.plugins.dokka)
     alias(libs.plugins.gitSemVer)
     alias(libs.plugins.kover)
-    alias(libs.plugins.kotest)
     alias(libs.plugins.kotlin.qa)
     alias(libs.plugins.npm.publish)
     alias(libs.plugins.multiJvmTesting)
@@ -127,9 +126,10 @@ allprojects {
 
 dependencies {
     listOf(
-        "jakta-api"
+        "jakta-api",
+        "jakta-dsl"
     ).forEach{
-        kover(project(":$it"))
+        kover(project(it))
     }
 }
 

@@ -5,14 +5,13 @@ import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import executeInTestScope
 import ifGoalMatch
-import io.kotest.core.spec.style.ShouldSpec
 import it.unibo.jakta.mas
 import it.unibo.jakta.plan.triggers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlinx.coroutines.delay
 
-
-class TestConcurrentDelay : ShouldSpec({
+class TestConcurrentDelay {
 
     val helloWorld =
         mas {
@@ -43,12 +42,13 @@ class TestConcurrentDelay : ShouldSpec({
             }
         }
 
-    beforeEach {
+    @BeforeTest
+    fun setup() {
         Logger.setMinSeverity(Severity.Error)
     }
 
-    should("run Hello World concurrently") {
-        @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testConcurrentDelay() {
         executeInTestScope { helloWorld }
     }
-})
+}

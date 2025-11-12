@@ -1,17 +1,20 @@
 package it.unibo.jakta.mas
 
+import co.touchlab.kermit.Logger
 import it.unibo.jakta.agent.Agent
 import it.unibo.jakta.environment.Environment
 import it.unibo.jakta.environment.EnvironmentContext
-import co.touchlab.kermit.Logger
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 
-data class MASImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.Environment>(
+/**
+ * Implementation of a [MAS].
+ */
+data class MASImpl<Belief : Any, Goal : Any, Env : Environment>(
     override val environment: Env,
-    override val agents: Set<it.unibo.jakta.agent.Agent<Belief, Goal, Env>>,
-) : it.unibo.jakta.mas.MAS<Belief, Goal, Env> {
+    override val agents: Set<Agent<Belief, Goal, Env>>,
+) : MAS<Belief, Goal, Env> {
     private val log =
         Logger(
             Logger.config,
@@ -19,7 +22,7 @@ data class MASImpl<Belief : Any, Goal : Any, Env : it.unibo.jakta.environment.En
         )
 
     override suspend fun run() = supervisorScope {
-        val environmentContext = _root_ide_package_.it.unibo.jakta.environment.EnvironmentContext(environment)
+        val environmentContext = EnvironmentContext(environment)
         agents
             .map { agent ->
                 log.d { "Launching agent ${agent.name}" }

@@ -5,34 +5,32 @@ import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import executeInTestScope
 import ifGoalMatch
-import io.kotest.core.spec.style.ShouldSpec
 import it.unibo.jakta.mas
 import it.unibo.jakta.plan.triggers
+import kotlin.test.Test
 
-class TestHelloWorld: ShouldSpec({
+class TestHelloWorld {
 
-    context("An Hello World Agent") {
-        Logger.setMinSeverity(Severity.Debug)
-
-        val helloWorld = mas {
-            environment { TestEnvironment() }
-            agent("HelloAgent") {
-                hasInitialGoals {
-                    !"goal"
-                }
-                hasPlans {
-                    adding.goal {
-                        ifGoalMatch("goal")
-                    } triggers {
-                        agent.print("Hello World!")
-                        agent.terminate()
-                    }
+    val helloWorld = mas {
+        environment { TestEnvironment() }
+        agent("HelloAgent") {
+            hasInitialGoals {
+                !"goal"
+            }
+            hasPlans {
+                adding.goal {
+                    ifGoalMatch("goal")
+                } triggers {
+                    agent.print("Hello World!")
+                    agent.terminate()
                 }
             }
         }
-
-        should("terminate") {
-            executeInTestScope { helloWorld }
-        }
     }
-})
+
+    @Test
+    fun testHelloWorld() {
+        Logger.setMinSeverity(Severity.Debug)
+        executeInTestScope { helloWorld }
+    }
+}

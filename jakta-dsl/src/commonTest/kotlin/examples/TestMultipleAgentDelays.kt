@@ -3,16 +3,14 @@ package examples
 import TestEnvironment
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
-
 import executeInTestScope
 import ifGoalMatch
-import io.kotest.core.spec.style.ShouldSpec
 import it.unibo.jakta.mas
 import it.unibo.jakta.plan.triggers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlin.test.Test
 import kotlinx.coroutines.delay
 
-class TestMultipleAgentDelays : ShouldSpec({
+class TestMultipleAgentDelays {
     val helloWorld =
         mas {
             environment { TestEnvironment() }
@@ -48,13 +46,9 @@ class TestMultipleAgentDelays : ShouldSpec({
             }
         }
 
-
-    beforeEach {
+    @Test
+    fun testMultipleAgentsDelays() {
         Logger.setMinSeverity(Severity.Error)
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    should("run multiple agents, skipping delays but keeping order"){
         executeInTestScope { helloWorld }
     }
-})
+}

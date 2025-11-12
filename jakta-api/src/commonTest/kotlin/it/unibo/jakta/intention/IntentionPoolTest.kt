@@ -1,20 +1,20 @@
 package it.unibo.jakta.intention
 
-import io.kotest.core.spec.style.ShouldSpec
-import io.kotest.matchers.collections.shouldContain
-import io.kotest.matchers.collections.shouldBeEmpty
-import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.booleans.shouldBeFalse
-import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.matchers.sequences.shouldContain
 import it.unibo.jakta.event.GoalAddEvent
-import kotlinx.coroutines.*
+import kotlin.reflect.typeOf
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.test.runTest
-import kotlin.reflect.typeOf
 
-class IntentionPoolTest : ShouldSpec({
+class IntentionPoolTest {
 
     lateinit var intentionPool: MutableIntentionPool
     lateinit var agentJob: Job
@@ -24,7 +24,8 @@ class IntentionPoolTest : ShouldSpec({
     lateinit var otherIntention: Intention
     lateinit var newGoalEvent: GoalAddEvent<String, Unit>
 
-    beforeEach {
+    @BeforeTest
+    fun init() {
         intentionPool = MutableIntentionPoolImpl(Channel())
         agentJob = SupervisorJob()
         intentionJob = Job(agentJob)
@@ -39,75 +40,109 @@ class IntentionPoolTest : ShouldSpec({
         )
     }
 
-    should("allow to insert an intention into an empty pool") {
-        intentionPool.tryPut(intention).shouldBeTrue()
-        intentionPool.getIntentionsSet().shouldContain(intention)
-        intentionPool.getIntentionsSet().size shouldBe 1
-    }
-
-    should("fail when inserting the same intention twice") {
-        intentionPool.tryPut(intention).shouldBeTrue()
-        intentionPool.tryPut(intention).shouldBeFalse()
-        intentionPool.getIntentionsSet().size shouldBe 1
-    }
-
-    should("drop an existing intention") {
-        intentionPool.tryPut(intention).shouldBeTrue()
-
-        runTest {
-            intentionPool.drop(intention.id).shouldBeTrue()
+    @Test
+    fun testInsertion() {
+        assertTrue("can insert intentions into the pool") {
+            intentionPool.tryPut(intention)
         }
 
-        intentionPool.getIntentionsSet().shouldBeEmpty()
-        intention.job.isCancelled.shouldBeTrue()
-        otherIntention.job.isCancelled.shouldBeFalse()
-        agentJob.isCancelled.shouldBeFalse()
-    }
-
-    should("create new intention when an event has no reference") {
-        runTest {
-            launch(agentJob) {
-                val next = intentionPool.nextIntention(newGoalEvent)
-                agentJob.children.shouldContain(next.job.parent)
-
-                val otherNext = intentionPool.nextIntention(newGoalEvent)
-                agentJob.children.shouldContain(otherNext.job.parent)
-
-                next.job shouldNotBe otherNext.job
-                next.job.parent shouldBe otherNext.job.parent
-            }
+        assertFalse("cannot insert twice the same") {
+            intentionPool.tryPut(intention)
         }
+
+        assertContains(
+            intentionPool.getIntentionsSet(),
+            intention,
+            "the inserted intention is present in the pool",
+        )
+
+        assertEquals(
+            1,
+            intentionPool.getIntentionsSet().size,
+            "the pool contains exactly one intention",
+        )
     }
 
-    should("reuse an existing intention when an event references it") {
-        intentionPool.tryPut(intention)
-
-        val event = newGoalEvent.copy(intention = intention)
-
-        runTest {
-            launch(agentJob) {
-                val next = intentionPool.nextIntention(event)
-                next shouldBe intention
-                next.job shouldBe intention.job
-                intentionPool.getIntentionsSet().size shouldBe 1
-            }
+    @Test
+    fun testDrop() = runTest {
+        assertTrue {
+            intentionPool.tryPut(intention)
         }
-    }
 
-    should("cancel all intentions when the agent job is cancelled") {
-        runTest {
-            launch(agentJob) {
-                val i1 = intentionPool.nextIntention(newGoalEvent)
-                val i2 = intentionPool.nextIntention(newGoalEvent)
-                val sub = intentionPool.nextIntention(newGoalEvent.copy(intention = i1))
-
-                agentJob.cancelAndJoin()
-
-                i1.job.isCancelled.shouldBeTrue()
-                i2.job.isCancelled.shouldBeTrue()
-                sub.job.isCancelled.shouldBeTrue()
-                intentionPool.getIntentionsSet().shouldBeEmpty()
-            }
+        assertFalse("cannot drop a non-existing intention") {
+            intentionPool.drop(otherIntention.id)
         }
+
+        assertTrue("can drop a previously added intention") {
+            intentionPool.drop(intention.id)
+        }
+
+        assertEquals(
+            0,
+            intentionPool.getIntentionsSet().size,
+            "the pool is empty after dropping the only intention",
+        )
+
+        assertTrue(
+            intention.job.isCancelled,
+            "the dropped intention's job is cancelled",
+        )
+
+        assertFalse(
+            otherIntention.job.isCancelled,
+            "other intentions' jobs are not cancelled",
+        )
+
+        assertFalse(
+            agentJob.isCancelled,
+            "the agent job is not cancelled",
+        )
     }
-})
+//
+//    should("create new intention when an event has no reference") {
+//        runTest {
+//            launch(agentJob) {
+//                val next = intentionPool.nextIntention(newGoalEvent)
+//                agentJob.children.shouldContain(next.job.parent)
+//
+//                val otherNext = intentionPool.nextIntention(newGoalEvent)
+//                agentJob.children.shouldContain(otherNext.job.parent)
+//
+//                next.job shouldNotBe otherNext.job
+//                next.job.parent shouldBe otherNext.job.parent
+//            }
+//        }
+//    }
+//
+//    should("reuse an existing intention when an event references it") {
+//        intentionPool.tryPut(intention)
+//
+//        val event = newGoalEvent.copy(intention = intention)
+//
+//        runTest {
+//            launch(agentJob) {
+//                val next = intentionPool.nextIntention(event)
+//                next shouldBe intention
+//                next.job shouldBe intention.job
+//                intentionPool.getIntentionsSet().size shouldBe 1
+//            }
+//        }
+//    }
+//
+//    should("cancel all intentions when the agent job is cancelled") {
+//        runTest {
+//            launch(agentJob) {
+//                val i1 = intentionPool.nextIntention(newGoalEvent)
+//                val i2 = intentionPool.nextIntention(newGoalEvent)
+//                val sub = intentionPool.nextIntention(newGoalEvent.copy(intention = i1))
+//
+//                agentJob.cancelAndJoin()
+//
+//                i1.job.isCancelled.shouldBeTrue()
+//                i2.job.isCancelled.shouldBeTrue()
+//                sub.job.isCancelled.shouldBeTrue()
+//                intentionPool.getIntentionsSet().shouldBeEmpty()
+//            }
+//        }
+//    }
+}

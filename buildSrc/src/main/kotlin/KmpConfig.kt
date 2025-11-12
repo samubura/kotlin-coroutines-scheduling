@@ -115,10 +115,5 @@ fun Project.configureKotlinMultiplatform() {
             }
         }
 
-        //TODO this is a temporary fix to avoid test task failures due to no tests being found in some targets
-        tasks.withType<KotlinTest>().configureEach {
-            failOnNoDiscoveredTests = false
-        }
-
     }
 }
